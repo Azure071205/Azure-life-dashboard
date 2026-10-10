@@ -186,7 +186,6 @@ textarea{width:100%;resize:vertical;min-height:90px;line-height:1.6}
 }
 .swatch:hover{transform:scale(1.08)}
 .swatch:active{transform:scale(.94)}
-/* 迷你播放器 */
 .mini-player{
   position:fixed;bottom:0;left:0;right:0;z-index:80;
   display:none;align-items:center;justify-content:space-between;gap:10px;
@@ -209,6 +208,11 @@ textarea{width:100%;resize:vertical;min-height:90px;line-height:1.6}
 .mini-btn:hover{opacity:.88}
 .mini-btn.ghost{background:transparent;color:var(--text);border:1px solid var(--border)}
 .mini-btn.ghost:hover{border-color:var(--accent);color:var(--accent)}
+.tip-box{
+  padding:10px 12px;background:var(--accent-soft);border-radius:10px;
+  font-size:12px;line-height:1.7;color:var(--text);
+}
+.tip-box b{color:var(--accent)}
 </style>
 </head>
 <body>
@@ -240,7 +244,6 @@ textarea{width:100%;resize:vertical;min-height:90px;line-height:1.6}
 
 <main id="app"></main>
 
-<!-- 迷你播放器 -->
 <div class="mini-player" id="miniPlayer">
   <div class="mini-info" id="miniInfo">
     <span class="mini-icon">🎵</span>
@@ -300,7 +303,7 @@ function toast(msg) {
   t.textContent = msg;
   t.classList.add('show');
   clearTimeout(t._tid);
-  t._tid = setTimeout(() => t.classList.remove('show'), 1800);
+  t._tid = setTimeout(() => t.classList.remove('show'), 2200);
 }
 function download(filename, content, type) {
   const blob = new Blob([content], { type });
@@ -426,7 +429,6 @@ async function deleteAudioBlob(key) {
   });
 }
 
-/* 今日歌曲（按日期做种子） */
 function getTodaySong() {
   if (!state.songs || !state.songs.length) return null;
   const today = todayStr();
@@ -459,7 +461,7 @@ async function playSong(song) {
   if (!song || !audioEl) return;
   try {
     const src = await loadSongSrc(song);
-    if (!src) { toast('无法加载音频'); return; }
+    if (!src) { toast('无法加载音频，可能已被清理'); return; }
     audioEl.src = src;
     await audioEl.play();
     currentSongId = song.id;
@@ -1406,6 +1408,34 @@ function openModuleModal(id) {
 }
 
 /* ==================== 音乐页 ==================== */
+async function handleSongUpload(file) {
+  const okExt = /\.(mp3|m4a|flac|wav|ogg|aac)$/i.test(file.name);
+  const okType = file.type.startsWith('audio/');
+  if (!okType && !okExt) {
+    toast('请选择音频文件（mp3/m4a/flac/wav/ogg）');
+    return;
+  }
+  if (file.size > 30 * 1024 * 1024) { toast('文件太大（>30MB）'); return; }
+  try {
+    const key = 'audio_' + Date.now() + '_' + Math.random().toString(36).slice(2, 7);
+    await putAudioBlob(key, file);
+    const name = file.name.replace(/\.[^.]+$/, '');
+    state.songs.push({
+      id: uid('song'),
+      title: name,
+      type: 'file',
+      blobKey: key,
+      createdAt: Date.now()
+    });
+    save();
+    toast('已添加：' + name);
+    render();
+  } catch (err) {
+    console.error(err);
+    toast('上传失败：' + err.message);
+  }
+}
+
 function renderMusic(app) {
   const songs = state.songs || [];
   const today = getTodaySong();
@@ -1430,10 +1460,15 @@ function renderMusic(app) {
     <div class="section-head"><h3>添加歌曲</h3></div>
 
     <div class="form-card">
+      <div class="tip-box" style="margin-bottom:12px">
+        <b>上传技巧</b><br>
+        · 手机弹出菜单时选「浏览 / 文件 / 选取文件」，不要选「语音备忘录」<br>
+        · 支持 mp3 / m4a / flac / wav / ogg，单个 ≤ 30MB<br>
+        · 不支持网易云 .ncm 加密格式
+      </div>
       <div class="field">
         <label>方式一：上传本地音频</label>
-        <input type="file" id="songFile" accept="audio/*">
-        <div class="muted" style="margin-top:6px">支持 mp3 / wav / m4a / ogg 等。建议单个文件 ≤ 30MB。数据只存在本设备。</div>
+        <button class="btn primary" id="songFileBtn">📁 选择音频文件</button>
       </div>
     </div>
 
@@ -1446,6 +1481,18 @@ function renderMusic(app) {
           <button class="btn primary" id="addUrlBtn">添加</button>
         </div>
         <div class="muted" style="margin-top:6px">需要是可直接播放的音频直链（不是网页链接）</div>
+      </div>
+    </div>
+
+    <div class="form-card">
+      <div class="field">
+        <label>方式三：粘贴音频 base64（手机系统拦截文件选择器时用）</label>
+        <textarea id="songBase64" placeholder="粘贴形如 data:audio/mpeg;base64,xxxx 的内容，或直接粘贴纯 base64 字符串" style="min-height:80px;font-family:monospace;font-size:12px"></textarea>
+        <div class="row" style="margin-top:8px">
+          <input type="text" id="songBase64Title" placeholder="歌名" style="width:160px">
+          <button class="btn primary" id="addBase64Btn">添加</button>
+        </div>
+        <div class="muted" style="margin-top:6px">在电脑上用 base64 命令转码后粘贴。建议 ≤ 5MB（约 3 分钟 mp3）。</div>
       </div>
     </div>
 
@@ -1486,31 +1533,29 @@ function renderMusic(app) {
     if (s) playSong(s);
   };
 
-  $('#songFile').onchange = async e => {
-    const file = e.target.files[0];
-    if (!file) return;
-    if (!file.type.startsWith('audio/')) { toast('请选择音频文件'); return; }
-    if (file.size > 30 * 1024 * 1024) { toast('文件太大（>30MB）'); return; }
+  /* 方式一：动态创建 input */
+  $('#songFileBtn').onclick = () => {
     try {
-      const key = 'audio_' + Date.now() + '_' + Math.random().toString(36).slice(2, 7);
-      await putAudioBlob(key, file);
-      const name = file.name.replace(/\.[^.]+$/, '');
-      state.songs.push({
-        id: uid('song'),
-        title: name,
-        type: 'file',
-        blobKey: key,
-        createdAt: Date.now()
-      });
-      save();
-      toast('已添加：' + name);
-      render();
-    } catch (err) {
-      console.error(err);
-      toast('上传失败：' + err.message);
+      const inp = document.createElement('input');
+      inp.type = 'file';
+      inp.accept = '';
+      inp.style.position = 'fixed';
+      inp.style.left = '-9999px';
+      document.body.appendChild(inp);
+      inp.onchange = async ev => {
+        const file = ev.target.files && ev.target.files[0];
+        setTimeout(() => inp.remove(), 500);
+        if (!file) return;
+        await handleSongUpload(file);
+      };
+      inp.click();
+    } catch (e) {
+      console.error(e);
+      toast('打开文件选择器失败，试试方式三');
     }
   };
 
+  /* 方式二：URL */
   $('#addUrlBtn').onclick = () => {
     const url = $('#songUrl').value.trim();
     const title = $('#songTitle').value.trim() || '未命名';
@@ -1525,6 +1570,38 @@ function renderMusic(app) {
     save();
     toast('已添加');
     render();
+  };
+
+  /* 方式三：base64 */
+  $('#addBase64Btn').onclick = async () => {
+    const raw = $('#songBase64').value.trim();
+    const title = $('#songBase64Title').value.trim() || '未命名';
+    if (!raw) { toast('请粘贴 base64 内容'); return; }
+    let dataUrl = raw;
+    if (!dataUrl.startsWith('data:')) {
+      dataUrl = 'data:audio/mpeg;base64,' + dataUrl.replace(/\s+/g, '');
+    }
+    try {
+      const res = await fetch(dataUrl);
+      const blob = await res.blob();
+      if (blob.size > 5 * 1024 * 1024) { toast('文件太大（>5MB）'); return; }
+      if (blob.size < 1024) { toast('内容似乎无效'); return; }
+      const key = 'audio_' + Date.now() + '_' + Math.random().toString(36).slice(2, 7);
+      await putAudioBlob(key, blob);
+      state.songs.push({
+        id: uid('song'),
+        title,
+        type: 'file',
+        blobKey: key,
+        createdAt: Date.now()
+      });
+      save();
+      toast('已添加：' + title);
+      render();
+    } catch (e) {
+      console.error(e);
+      toast('解析失败：' + e.message);
+    }
   };
 
   list.addEventListener('click', async ev => {
@@ -1794,17 +1871,15 @@ function renderSettings(app) {
       <div class="field">
         <label>背景遮罩暗度：<span id="overlayVal">${s.bgOverlay || 0}</span>%</label>
         <input type="range" id="bgOverlay" min="0" max="80" value="${s.bgOverlay || 0}">
-        <div class="muted">值越大，背景越暗，文字越清晰。</div>
       </div>
 
       <div class="field">
         <label>卡片不透明度：<span id="alphaVal">${s.cardAlpha || 100}</span>%</label>
         <input type="range" id="cardAlpha" min="40" max="100" value="${s.cardAlpha || 100}">
-        <div class="muted">值越小，卡片越透，能看到更多背景。</div>
       </div>
 
       <div class="field">
-        <label>主色调（按钮、高亮）</label>
+        <label>主色调</label>
         <div class="color-swatches" id="accentSwatches">
           ${['#5b5bd6','#3b82f6','#10b981','#ef4444','#f59e0b','#8b5cf6','#ec4899','#14b8a6'].map(c =>
             `<span class="swatch" data-color="${c}" style="background:${c}"></span>`
@@ -1858,8 +1933,8 @@ function renderSettings(app) {
       <div class="card-title">导出</div>
       <div class="row">
         <button class="btn" id="exportBtn">导出 JSON（完整备份）</button>
-        <button class="btn" id="exportMd">导出 Markdown（日志+回顾）</button>
-        <button class="btn" id="exportCsv">导出 CSV（记录明细）</button>
+        <button class="btn" id="exportMd">导出 Markdown</button>
+        <button class="btn" id="exportCsv">导出 CSV</button>
         <button class="btn" id="importBtn">导入 JSON</button>
         <input type="file" id="importFile" accept=".json" style="display:none">
         <button class="btn danger" id="resetBtn">清空所有数据</button>
@@ -2072,7 +2147,6 @@ function renderSettings(app) {
   $('#resetBtn').onclick = async () => {
     if (!confirm('确定清空所有数据？此操作不可恢复。')) return;
     if (!confirm('再确认一次：真的要清空吗？')) return;
-    // 删除 IndexedDB 里的音频
     try {
       const db = await openAudioDB();
       const tx = db.transaction(AUDIO_STORE, 'readwrite');
@@ -2114,7 +2188,6 @@ function init() {
   audioEl.addEventListener('play', updateMiniPlayer);
   audioEl.addEventListener('pause', updateMiniPlayer);
   audioEl.addEventListener('ended', () => {
-    // 播放结束后自动切下一首随机
     const s = getRandomSong();
     if (s && state.songs.length > 1) playSong(s);
     else updateMiniPlayer();

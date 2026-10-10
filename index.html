@@ -178,6 +178,13 @@ textarea{width:100%;resize:vertical;min-height:90px;line-height:1.6}
   background-size:cover;background-position:center;display:flex;align-items:center;justify-content:center;
   color:var(--dim);font-size:13px;margin-bottom:10px;
 }
+.color-swatches{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:6px}
+.swatch{
+  width:32px;height:32px;border-radius:8px;cursor:pointer;
+  transition:.15s;box-shadow:0 1px 3px rgba(0,0,0,.08);
+}
+.swatch:hover{transform:scale(1.08)}
+.swatch:active{transform:scale(.94)}
 </style>
 </head>
 <body>
@@ -1469,16 +1476,26 @@ function renderSettings(app) {
 
       <div class="field">
         <label>主色调（按钮、高亮）</label>
-        <div class="row">
-          <input type="color" id="accentColor" value="${s.accentColor || '#5b5bd6'}">
+        <div class="color-swatches" id="accentSwatches">
+          ${['#5b5bd6','#3b82f6','#10b981','#ef4444','#f59e0b','#8b5cf6','#ec4899','#14b8a6'].map(c =>
+            `<span class="swatch" data-color="${c}" style="background:${c}"></span>`
+          ).join('')}
+        </div>
+        <div class="row" style="margin-top:8px">
+          <input type="text" id="accentColor" placeholder="#5b5bd6" value="${s.accentColor || ''}" style="flex:1;min-width:110px">
           <button class="btn sm" id="accentReset">恢复默认</button>
         </div>
       </div>
 
       <div class="field">
         <label>文字颜色</label>
-        <div class="row">
-          <input type="color" id="textColor" value="${s.textColor || (s.theme === 'dark' ? '#e8eaf0' : '#16181f')}">
+        <div class="color-swatches" id="textSwatches">
+          ${['#16181f','#000000','#1f2937','#374151','#6b7280','#ffffff','#e8eaf0','#8b92a4'].map(c =>
+            `<span class="swatch" data-color="${c}" style="background:${c};${c === '#ffffff' || c === '#e8eaf0' ? 'border:1px solid #ccc' : ''}"></span>`
+          ).join('')}
+        </div>
+        <div class="row" style="margin-top:8px">
+          <input type="text" id="textColor" placeholder="${s.theme === 'dark' ? '#e8eaf0' : '#16181f'}" value="${s.textColor || ''}" style="flex:1;min-width:110px">
           <button class="btn sm" id="textReset">恢复默认</button>
         </div>
       </div>
@@ -1578,22 +1595,49 @@ function renderSettings(app) {
   };
   $('#cardAlpha').onchange = () => { save(); };
 
-  $('#accentColor').oninput = e => {
-    state.settings.accentColor = e.target.value;
-    document.documentElement.style.setProperty('--accent', e.target.value);
+  // 通用色值校验
+  const isValidHex = v => /^#[0-9a-fA-F]{6}$/.test(v);
+
+  // 主色调
+  const accentInput = $('#accentColor');
+  const applyAccent = v => {
+    if (!isValidHex(v)) return;
+    state.settings.accentColor = v;
+    document.documentElement.style.setProperty('--accent', v);
   };
-  $('#accentColor').onchange = () => { save(); };
+  accentInput.oninput = e => applyAccent(e.target.value.trim());
+  accentInput.onchange = () => { if (isValidHex(accentInput.value.trim())) save(); };
+  $('#accentSwatches').addEventListener('click', e => {
+    const sw = e.target.closest('.swatch');
+    if (!sw) return;
+    const color = sw.dataset.color;
+    accentInput.value = color;
+    applyAccent(color);
+    save();
+  });
   $('#accentReset').onclick = () => {
     state.settings.accentColor = '';
     document.documentElement.style.removeProperty('--accent');
     save(); render();
   };
 
-  $('#textColor').oninput = e => {
-    state.settings.textColor = e.target.value;
-    document.documentElement.style.setProperty('--text', e.target.value);
+  // 文字颜色
+  const textInput = $('#textColor');
+  const applyText = v => {
+    if (!isValidHex(v)) return;
+    state.settings.textColor = v;
+    document.documentElement.style.setProperty('--text', v);
   };
-  $('#textColor').onchange = () => { save(); };
+  textInput.oninput = e => applyText(e.target.value.trim());
+  textInput.onchange = () => { if (isValidHex(textInput.value.trim())) save(); };
+  $('#textSwatches').addEventListener('click', e => {
+    const sw = e.target.closest('.swatch');
+    if (!sw) return;
+    const color = sw.dataset.color;
+    textInput.value = color;
+    applyText(color);
+    save();
+  });
   $('#textReset').onclick = () => {
     state.settings.textColor = '';
     document.documentElement.style.removeProperty('--text');

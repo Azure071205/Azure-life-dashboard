@@ -73,6 +73,7 @@ input,select,textarea{
 }
 input:focus,select:focus,textarea:focus{border-color:var(--accent)}
 input[type=color]{padding:2px;height:36px;width:46px;cursor:pointer}
+textarea{width:100%;resize:vertical;min-height:90px;line-height:1.6}
 .btn{
   font-family:inherit;font-size:13px;padding:8px 15px;border-radius:9px;border:1px solid var(--border);
   background:var(--card);color:var(--text);cursor:pointer;transition:.15s;
@@ -96,7 +97,7 @@ input[type=color]{padding:2px;height:36px;width:46px;cursor:pointer}
 .icon-btn{border:none;background:transparent;color:var(--dim);cursor:pointer;font-size:16px;padding:4px 6px;border-radius:7px}
 .icon-btn:hover{background:var(--accent-soft);color:var(--red)}
 .empty{color:var(--dim);font-size:13px;padding:26px 0;text-align:center}
-.week-nav{display:flex;align-items:center;gap:10px}
+.week-nav{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
 .modal-mask{
   position:fixed;inset:0;background:rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center;
   z-index:100;padding:18px;
@@ -126,7 +127,7 @@ input[type=color]{padding:2px;height:36px;width:46px;cursor:pointer}
   <nav class="tabs" id="tabs">
     <button class="tab active" data-view="dashboard">仪表盘</button>
     <button class="tab" data-view="log">记录</button>
-    <button class="tab" data-view="plan">周计划</button>
+    <button class="tab" data-view="plan">计划</button>
     <button class="tab" data-view="modules">模块</button>
     <button class="tab" data-view="review">回顾</button>
     <button class="tab" data-view="settings">设置</button>
@@ -209,7 +210,8 @@ function defaultState() {
       { id: 'm_reflect', name: '精神反思',  color: '#14b8a6', type: 'manual', weekly: 120,  parentId: null, order: 11, archived: false },
       { id: 'm_other',   name: '未分类',    color: '#9ca3af', type: 'record', weekly: 0,    parentId: null, order: 12, archived: false }
     ],
-    weekPlans: {},
+    dayPlans: {},  // { "2026-10-10": { "m_work": 480 } }
+    logs: {},      // { "2026-10-10": "今天..." }
     entries: []
   };
 }
@@ -223,7 +225,8 @@ function loadState() {
       const s = JSON.parse(raw);
       s.settings = Object.assign({ weekStart: 1, minUnit: 15, theme: 'light' }, s.settings || {});
       s.modules = s.modules || [];
-      s.weekPlans = s.weekPlans || {};
+      s.dayPlans = s.dayPlans || {};
+      s.logs = s.logs || {};
       s.entries = s.entries || [];
       return s;
     }
@@ -269,15 +272,26 @@ async function syncToCloud() {
       }
     }
 
-    const plans = Object.values(state.weekPlans);
-    if (plans.length) {
-      const payload = plans.map(p => ({
-        id: p.weekStart, user_id: currentUser.id, week_start: p.weekStart,
-        targets: p.targets, snapshot: p.snapshot, created_at: p.createdAt,
-        updated_at: new Date().toISOString()
+    // 日计划
+    const dayPlanKeys = Object.keys(state.dayPlans);
+    if (dayPlanKeys.length) {
+      const payload = dayPlanKeys.map(d => ({
+        id: d, user_id: currentUser.id, date: d,
+        targets: state.dayPlans[d], updated_at: new Date().toISOString()
       }));
-      const { error } = await sbClient.from('week_plans').upsert(payload);
-      if (error) console.error('同步周计划失败', error);
+      const { error } = await sbClient.from('day_plans').upsert(payload);
+      if (error) console.error('同步日计划失败', error);
+    }
+
+    // 每日日志
+    const logKeys = Object.keys(state.logs);
+    if (logKeys.length) {
+      const payload = logKeys.map(d => ({
+        id: d, user_id: currentUser.id, date: d,
+        content: state.logs[d] || '', updated_at: new Date().toISOString()
+      }));
+      const { error } = await sbClient.from('daily_logs').upsert(payload);
+      if (error) console.error('同步日志失败', error);
     }
 
     console.log('☁️ 云端同步完成');
@@ -295,10 +309,14 @@ async function syncFromCloud() {
     const { data: ce, error: e2 } = await sbClient.from('entries').select('*');
     if (e2) throw e2;
 
-    const { data: cp, error: e3 } = await sbClient.from('week_plans').select('*');
-    if (e3) throw e3;
+    const { data: cdp, error: e3 } = await sbClient.from('day_plans').select('*');
+    if (e3) console.warn('day_plans 表不存在或拉取失败（可忽略，去建表）', e3);
 
-    const cloudEmpty = (!cm || cm.length === 0) && (!ce || ce.length === 0) && (!cp || cp.length === 0);
+    const { data: cl, error: e4 } = await sbClient.from('daily_logs').select('*');
+    if (e4) console.warn('daily_logs 表不存在或拉取失败（可忽略，去建表）', e4);
+
+    const cloudEmpty = (!cm || cm.length === 0) && (!ce || ce.length === 0)
+                    && (!cdp || cdp.length === 0) && (!cl || cl.length === 0);
 
     if (cloudEmpty) {
       console.log('☁️ 云端为空，上传本地数据');
@@ -322,13 +340,17 @@ async function syncFromCloud() {
       }));
     }
 
-    if (cp) {
-      state.weekPlans = {};
-      cp.forEach(item => {
-        state.weekPlans[item.week_start] = {
-          weekStart: item.week_start, targets: item.targets,
-          snapshot: item.snapshot, createdAt: item.created_at
-        };
+    if (cdp) {
+      state.dayPlans = {};
+      cdp.forEach(item => {
+        state.dayPlans[item.date] = item.targets || {};
+      });
+    }
+
+    if (cl) {
+      state.logs = {};
+      cl.forEach(item => {
+        state.logs[item.date] = item.content || '';
       });
     }
 
@@ -354,7 +376,8 @@ async function clearCloud() {
   try {
     await sbClient.from('modules').delete().eq('user_id', currentUser.id);
     await sbClient.from('entries').delete().eq('user_id', currentUser.id);
-    await sbClient.from('week_plans').delete().eq('user_id', currentUser.id);
+    await sbClient.from('day_plans').delete().eq('user_id', currentUser.id);
+    await sbClient.from('daily_logs').delete().eq('user_id', currentUser.id);
     console.log('☁️ 云端已清空');
   } catch (e) { console.error('清空云端失败', e); }
 }
@@ -422,44 +445,41 @@ function shiftWeek(ws, n) {
 }
 const WEEK_NAMES = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'];
 
-/* ==================== 周计划 ==================== */
-function getWeekPlan(ws, create = true) {
-  let p = state.weekPlans[ws];
-  if (!p && create) {
-    p = { weekStart: ws, targets: {}, snapshot: {}, createdAt: Date.now() };
-    state.modules.filter(m => !m.archived).forEach(m => {
-      p.targets[m.id] = m.type === 'record' ? null : (m.weekly || 0);
-      p.snapshot[m.id] = { name: m.name, color: m.color, type: m.type };
+/* ==================== 日计划/周目标 计算 ==================== */
+function getDefaultDaily(m) {
+  if (m.type === 'record') return null;
+  return Math.round((m.weekly || 0) / 7);
+}
+
+function getDayTarget(dateStr, moduleId) {
+  const custom = (state.dayPlans[dateStr] || {})[moduleId];
+  if (custom != null) return custom;
+  const m = state.modules.find(x => x.id === moduleId);
+  if (!m) return null;
+  return getDefaultDaily(m);
+}
+
+function getWeekTargets(ws) {
+  const days = getWeekDays(ws);
+  const totals = {};
+  state.modules.filter(m => !m.archived).forEach(m => {
+    if (m.type === 'record') { totals[m.id] = null; return; }
+    let sum = 0;
+    days.forEach(d => {
+      const t = getDayTarget(d, m.id);
+      if (t != null) sum += t;
     });
-    state.weekPlans[ws] = p;
-    save();
-  }
-  return p;
+    totals[m.id] = sum;
+  });
+  return totals;
 }
 
 function getWeekModules(ws) {
-  const plan = getWeekPlan(ws);
-  const isPast = ws < getWeekStart(todayStr());
-  const out = [];
-  if (isPast) {
-    for (const id in plan.snapshot) {
-      const s = plan.snapshot[id];
-      out.push({ id, name: s.name, color: s.color, type: s.type, target: plan.targets[id] ?? null });
-    }
-    out.sort((a, b) => (a.type === 'fixed' ? -1 : 1) - (b.type === 'fixed' ? -1 : 1));
-  } else {
-    let dirty = false;
-    state.modules.filter(m => !m.archived).sort((a, b) => a.order - b.order).forEach(m => {
-      if (!(m.id in plan.targets)) {
-        plan.targets[m.id] = m.type === 'record' ? null : (m.weekly || 0);
-        plan.snapshot[m.id] = { name: m.name, color: m.color, type: m.type };
-        dirty = true;
-      }
-      out.push({ id: m.id, name: m.name, color: m.color, type: m.type, target: plan.targets[m.id] ?? null });
-    });
-    if (dirty) save();
-  }
-  return out;
+  const targets = getWeekTargets(ws);
+  const mods = state.modules.filter(m => !m.archived).sort((a, b) => a.order - b.order);
+  return mods.map(m => ({
+    id: m.id, name: m.name, color: m.color, type: m.type, target: targets[m.id] ?? null
+  }));
 }
 
 /* ==================== 实际记录汇总 ==================== */
@@ -478,7 +498,7 @@ function getWeekActuals(ws) {
 /* ==================== 视图路由 ==================== */
 let currentView = 'dashboard';
 let viewDate = todayStr();
-let planWeek = null;
+let planDate = todayStr();
 let reviewWeek = null;
 let donutChart = null, stackChart = null;
 
@@ -523,7 +543,7 @@ function renderDashboard(app) {
       <div class="stat"><div class="stat-label">可分配</div><div class="stat-value">${fmtHours(allocMin)}</div><div class="stat-sub">未分配 ${fmtHours(Math.max(0, unassignedMin))}</div></div>
       <div class="stat"><div class="stat-label">已记录</div><div class="stat-value">${fmtHours(recordedMin)}</div><div class="stat-sub">未记录 ${fmtHours(unrecordedMin)}</div></div>
     </div>
-    <div class="section-head"><h3>模块进度</h3><div class="muted">目标 vs 实际</div></div>
+    <div class="section-head"><h3>模块进度</h3><div class="muted">本周目标 vs 实际</div></div>
     <div class="mod-grid" id="modGrid"></div>
     <div class="charts">
       <div class="card"><div class="card-title">本周实际时间分布</div><canvas id="donut"></canvas></div>
@@ -655,6 +675,7 @@ function renderLog(app) {
 
   const dObj = parseDate(viewDate);
   const totalMin = dayEntries.reduce((s, e) => s + e.duration, 0);
+  const logContent = state.logs[viewDate] || '';
 
   const modOptions = mods.map(m => `<option value="${m.id}">${esc(m.name)}</option>`).join('');
 
@@ -706,6 +727,12 @@ function renderLog(app) {
       <div class="muted">共 ${fmtDuration(totalMin)}</div>
     </div>
     <div id="entryList"></div>
+
+    <div class="section-head"><h3>每日日志</h3><div class="muted">自动保存</div></div>
+    <div class="form-card">
+      <textarea id="logArea" placeholder="今天发生了什么？感受如何？有什么想法？">${esc(logContent)}</textarea>
+      <div class="muted" style="margin-top:8px" id="logStatus">${logContent ? '已保存' : ''}</div>
+    </div>
   `;
 
   const list = $('#entryList');
@@ -737,6 +764,32 @@ function renderLog(app) {
     save();
     deleteFromCloud('entries', delId);
     render();
+  });
+
+  // 每日日志自动保存
+  const logArea = $('#logArea');
+  const logStatus = $('#logStatus');
+  let logTimer = null;
+  logArea.addEventListener('input', () => {
+    if (logStatus) logStatus.textContent = '输入中…';
+    clearTimeout(logTimer);
+    logTimer = setTimeout(() => {
+      const text = logArea.value;
+      if (text.trim()) {
+        state.logs[viewDate] = text;
+      } else {
+        delete state.logs[viewDate];
+      }
+      save();
+      if (logStatus) logStatus.textContent = '已保存 ' + new Date().toLocaleTimeString();
+    }, 800);
+  });
+  logArea.addEventListener('blur', () => {
+    const text = logArea.value;
+    if (text.trim()) state.logs[viewDate] = text;
+    else delete state.logs[viewDate];
+    save();
+    if (logStatus) logStatus.textContent = '已保存';
   });
 
   $('#prevDay').onclick = () => { viewDate = fmtDate(new Date(parseDate(viewDate).getTime() - 864e5)); render(); };
@@ -815,81 +868,124 @@ function tickTimer() {
   el.textContent = `${h}:${m}:${s}`;
 }
 
-/* ==================== 周计划页 ==================== */
+/* ==================== 计划页（日计划 + 周汇总） ==================== */
 function renderPlan(app) {
-  const ws = planWeek;
+  const day = planDate;
+  const dObj = parseDate(day);
+  const ws = getWeekStart(day);
   const days = getWeekDays(ws);
-  const mods = getWeekModules(ws);
-  const plan = getWeekPlan(ws);
+  const mods = state.modules.filter(m => !m.archived).sort((a, b) => a.order - b.order);
 
-  const TOTAL = 168 * 60;
-  let fixedMin = 0, manualMin = 0;
+  // 当天目标
+  const dayTargets = {};
   mods.forEach(m => {
-    if (m.type === 'fixed') fixedMin += (m.target || 0);
-    else if (m.type === 'manual') manualMin += (m.target || 0);
+    dayTargets[m.id] = getDayTarget(day, m.id);
   });
-  const allocMin = TOTAL - fixedMin;
-  const rest = allocMin - manualMin;
+
+  // 当天统计
+  const DAY_TOTAL = 24 * 60;
+  let dayFixed = 0, dayManual = 0;
+  mods.forEach(m => {
+    const v = dayTargets[m.id] || 0;
+    if (m.type === 'fixed') dayFixed += v;
+    else if (m.type === 'manual') dayManual += v;
+  });
+  const dayAlloc = DAY_TOTAL - dayFixed;
+  const dayRest = dayAlloc - dayManual;
+
+  // 周汇总
+  const weekTotals = getWeekTargets(ws);
+
+  const typeLabel = { fixed: '固定', manual: '手动目标', record: '仅记录' };
 
   app.innerHTML = `
     <div class="section-head">
-      <h2>周计划</h2>
+      <h2>计划</h2>
       <div class="week-nav">
-        <button class="btn sm" id="prevWeek">← 上一周</button>
-        <span class="muted">${ws} ~ ${days[6]}</span>
-        <button class="btn sm" id="nextWeek">下一周 →</button>
-        <button class="btn sm" id="thisWeek">本周</button>
+        <button class="btn sm" id="prevDay">← 前一天</button>
+        <input type="date" id="datePick" value="${day}">
+        <button class="btn sm" id="nextDay">后一天 →</button>
+        <button class="btn sm" id="todayBtn">今天</button>
       </div>
     </div>
 
-    <div class="stats" style="margin-bottom:16px">
-      <div class="stat"><div class="stat-label">固定</div><div class="stat-value">${fmtHours(fixedMin)}</div></div>
-      <div class="stat"><div class="stat-label">可分配</div><div class="stat-value">${fmtHours(allocMin)}</div></div>
-      <div class="stat"><div class="stat-label">已分配</div><div class="stat-value">${fmtHours(manualMin)}</div></div>
-      <div class="stat"><div class="stat-label">${rest >= 0 ? '未分配' : '超出'}</div>
-        <div class="stat-value" style="color:${rest >= 0 ? 'var(--green)' : 'var(--red)'}">${fmtHours(Math.abs(rest))}</div></div>
+    <div class="muted" style="margin-bottom:12px">
+      正在编辑：<b>${day}（${WEEK_NAMES[dObj.getDay()]}）</b>。这里改的是「这一天」的目标，下面周汇总会自动更新。
     </div>
 
-    <div class="card">
-      <div class="card-title">各模块每周目标（小时，可填小数）</div>
+    <div class="stats" style="margin-bottom:16px">
+      <div class="stat"><div class="stat-label">一天总时间</div><div class="stat-value">24h</div></div>
+      <div class="stat"><div class="stat-label">固定</div><div class="stat-value">${fmtHours(dayFixed)}</div></div>
+      <div class="stat"><div class="stat-label">可分配</div><div class="stat-value">${fmtHours(dayAlloc)}</div></div>
+      <div class="stat"><div class="stat-label">${dayRest >= 0 ? '未分配' : '超出'}</div>
+        <div class="stat-value" style="color:${dayRest >= 0 ? 'var(--green)' : 'var(--red)'}">${fmtHours(Math.abs(dayRest))}</div></div>
+    </div>
+
+    <div class="card" style="margin-bottom:20px">
+      <div class="card-title">「${day}」日计划（小时）</div>
       <table>
-        <thead><tr><th>模块</th><th>类型</th><th style="width:150px">每周目标</th></tr></thead>
-        <tbody id="planBody"></tbody>
+        <thead><tr><th>模块</th><th>类型</th><th style="width:150px">当天目标</th></tr></thead>
+        <tbody id="dayBody"></tbody>
       </table>
     </div>
-    <div class="muted" style="margin-top:12px">修改后自动保存。历史周的目标不会因模块改名而改变。</div>
+
+    <div class="section-head"><h3>本周汇总（7 天合计）</h3>
+      <div class="muted">${ws} ~ ${days[6]}</div>
+    </div>
+    <div class="card">
+      <table>
+        <thead><tr><th>模块</th><th>类型</th><th>本周目标（自动汇总）</th></tr></thead>
+        <tbody id="weekBody"></tbody>
+      </table>
+    </div>
   `;
 
-  const tbody = $('#planBody');
-  const typeLabel = { fixed: '固定', manual: '手动目标', record: '仅记录' };
-
+  // 渲染日计划表
+  const dayBody = $('#dayBody');
   mods.forEach(m => {
     const tr = document.createElement('tr');
     const editable = m.type !== 'record';
+    const val = dayTargets[m.id];
     tr.innerHTML = `
       <td><span class="dot" style="display:inline-block;background:${m.color};margin-right:7px"></span>${esc(m.name)}</td>
       <td><span class="tag">${typeLabel[m.type] || m.type}</span></td>
       <td>${editable
-        ? `<input type="number" step="0.25" min="0" style="width:100px" value="${m.target ? (m.target / 60) : 0}" data-mid="${m.id}">`
+        ? `<input type="number" step="0.25" min="0" style="width:100px" value="${val != null ? (val / 60) : 0}" data-mid="${m.id}">`
         : '<span class="muted">—</span>'}</td>
     `;
-    tbody.appendChild(tr);
+    dayBody.appendChild(tr);
   });
 
-  tbody.addEventListener('change', ev => {
+  dayBody.addEventListener('change', ev => {
     const inp = ev.target.closest('[data-mid]');
     if (!inp) return;
     const mid = inp.dataset.mid;
     const hours = parseFloat(inp.value) || 0;
-    plan.targets[mid] = Math.round(hours * 60);
+    const minutes = Math.round(hours * 60);
+    if (!state.dayPlans[day]) state.dayPlans[day] = {};
+    state.dayPlans[day][mid] = minutes;
     save();
     toast('已更新');
     render();
   });
 
-  $('#prevWeek').onclick = () => { planWeek = shiftWeek(planWeek, -1); render(); };
-  $('#nextWeek').onclick = () => { planWeek = shiftWeek(planWeek, 1); render(); };
-  $('#thisWeek').onclick = () => { planWeek = getWeekStart(todayStr()); render(); };
+  // 渲染周汇总表
+  const weekBody = $('#weekBody');
+  mods.forEach(m => {
+    const tr = document.createElement('tr');
+    const total = weekTotals[m.id];
+    tr.innerHTML = `
+      <td><span class="dot" style="display:inline-block;background:${m.color};margin-right:7px"></span>${esc(m.name)}</td>
+      <td><span class="tag">${typeLabel[m.type] || m.type}</span></td>
+      <td>${total != null ? fmtHours(total) : '<span class="muted">—</span>'}</td>
+    `;
+    weekBody.appendChild(tr);
+  });
+
+  $('#prevDay').onclick = () => { planDate = fmtDate(new Date(parseDate(planDate).getTime() - 864e5)); render(); };
+  $('#nextDay').onclick = () => { planDate = fmtDate(new Date(parseDate(planDate).getTime() + 864e5)); render(); };
+  $('#todayBtn').onclick = () => { planDate = todayStr(); render(); };
+  $('#datePick').onchange = e => { planDate = e.target.value; render(); };
 }
 
 /* ==================== 模块管理页 ==================== */
@@ -905,12 +1001,13 @@ function renderModules(app) {
     </div>
     <div class="card">
       <table>
-        <thead><tr><th style="width:30px"></th><th>名称</th><th>类型</th><th>默认周目标</th><th>状态</th><th style="width:150px"></th></tr></thead>
+        <thead><tr><th style="width:30px"></th><th>名称</th><th>类型</th><th>默认每日目标</th><th>状态</th><th style="width:150px"></th></tr></thead>
         <tbody id="modBody"></tbody>
       </table>
     </div>
     <div class="muted" style="margin-top:12px">
-      固定 = 每周写死（如睡眠）；手动目标 = 每周可在「周计划」里调整；仅记录 = 不设目标，只统计实际。
+      固定 = 每天写死（如睡眠）；手动目标 = 每天可在「计划」里调整；仅记录 = 不设目标，只统计实际。
+      「默认每日目标」会自动 ×7 作为一周的目标参考。
     </div>
   `;
 
@@ -920,11 +1017,12 @@ function renderModules(app) {
   mods.forEach(m => {
     const tr = document.createElement('tr');
     if (m.archived) tr.style.opacity = '.45';
+    const dailyMin = getDefaultDaily(m);
     tr.innerHTML = `
       <td><span class="dot" style="background:${m.color}"></span></td>
       <td style="font-weight:600">${esc(m.name)}</td>
       <td><span class="tag" style="background:${typeColor[m.type]}22;color:${typeColor[m.type]}">${typeLabel[m.type]}</span></td>
-      <td>${m.type === 'record' ? '<span class="muted">—</span>' : fmtHours(m.weekly)}</td>
+      <td>${dailyMin != null ? fmtHours(dailyMin) : '<span class="muted">—</span>'}</td>
       <td>${m.archived ? '<span class="muted">已归档</span>' : '<span class="ok">使用中</span>'}</td>
       <td>
         <button class="btn sm" data-edit="${m.id}">编辑</button>
@@ -968,6 +1066,7 @@ function openModuleModal(id) {
     : { ...state.modules.find(x => x.id === id) };
 
   const parents = state.modules.filter(x => x.id !== m.id && !x.parentId);
+  const dailyHours = (m.weekly || 0) / 7 / 60;
 
   const mask = document.createElement('div');
   mask.className = 'modal-mask';
@@ -978,13 +1077,16 @@ function openModuleModal(id) {
       <div class="field"><label>颜色</label><input type="color" id="mColor" value="${m.color}"></div>
       <div class="field"><label>类型</label>
         <select id="mType">
-          <option value="fixed" ${m.type === 'fixed' ? 'selected' : ''}>固定（每周写死）</option>
-          <option value="manual" ${m.type === 'manual' ? 'selected' : ''}>手动目标（每周可调）</option>
+          <option value="fixed" ${m.type === 'fixed' ? 'selected' : ''}>固定（每天写死）</option>
+          <option value="manual" ${m.type === 'manual' ? 'selected' : ''}>手动目标（每天可调）</option>
           <option value="record" ${m.type === 'record' ? 'selected' : ''}>仅记录（不设目标）</option>
         </select>
       </div>
-      <div class="field"><label>默认每周目标（小时）</label><input type="number" id="mWeekly" step="0.5" min="0" value="${m.weekly / 60}"></div>
-      <div class="field"><label>父模块（可选，用于二级分类）</label>
+      <div class="field"><label>默认每日目标（小时）</label>
+        <input type="number" id="mDaily" step="0.25" min="0" value="${dailyHours.toFixed(2)}">
+        <div class="muted" style="margin-top:5px">周目标 = 每日 × 7</div>
+      </div>
+      <div class="field"><label>父模块（可选）</label>
         <select id="mParent">
           <option value="">（无）</option>
           ${parents.map(p => `<option value="${p.id}" ${m.parentId === p.id ? 'selected' : ''}>${esc(p.name)}</option>`).join('')}
@@ -1007,7 +1109,8 @@ function openModuleModal(id) {
     m.name = name;
     m.color = $('#mColor', mask).value;
     m.type = $('#mType', mask).value;
-    m.weekly = Math.round((parseFloat($('#mWeekly', mask).value) || 0) * 60);
+    const dailyH = parseFloat($('#mDaily', mask).value) || 0;
+    m.weekly = Math.round(dailyH * 7 * 60); // 存为周目标（分钟）
     m.parentId = $('#mParent', mask).value || null;
 
     if (isNew) state.modules.push(m);
@@ -1044,6 +1147,9 @@ function renderReview(app) {
   const dayTotals = days.map(d => state.entries.filter(e => e.date === d).reduce((s, e) => s + e.duration, 0));
   const maxDay = Math.max(...dayTotals, 1);
 
+  // 该周的日志
+  const weekLogs = days.filter(d => state.logs[d]).map(d => ({ date: d, content: state.logs[d] }));
+
   app.innerHTML = `
     <div class="section-head">
       <h2>周回顾</h2>
@@ -1077,7 +1183,7 @@ function renderReview(app) {
       </div>
     </div>
 
-    <div class="card">
+    <div class="card" style="margin-bottom:16px">
       <div class="card-title">目标 vs 实际</div>
       <table>
         <thead><tr><th>模块</th><th>类型</th><th>目标</th><th>实际</th><th>差额</th></tr></thead>
@@ -1096,6 +1202,18 @@ function renderReview(app) {
         </tbody>
       </table>
     </div>
+
+    ${weekLogs.length ? `
+      <div class="card">
+        <div class="card-title">本周日志</div>
+        ${weekLogs.map(l => `
+          <div style="padding:10px 0;border-bottom:1px solid var(--border)">
+            <div class="muted" style="margin-bottom:5px">${l.date}</div>
+            <div style="white-space:pre-wrap;line-height:1.6">${esc(l.content)}</div>
+          </div>
+        `).join('')}
+      </div>
+    ` : ''}
   `;
 
   $('#prevR').onclick = () => { reviewWeek = shiftWeek(reviewWeek, -1); render(); };
@@ -1142,7 +1260,7 @@ function renderSettings(app) {
         <button class="btn danger" id="resetBtn">清空所有数据</button>
       </div>
       <div class="muted" style="margin-top:12px">
-        数据保存在浏览器本地，登录后自动同步到云端。换设备时，登录同一个账号即可。
+        数据保存在浏览器本地，登录后自动同步到云端。
       </div>
     </div>
 
@@ -1156,7 +1274,7 @@ function renderSettings(app) {
     <div class="card" style="margin-top:16px">
       <div class="card-title">统计</div>
       <div class="muted">
-        模块数：${state.modules.length} ｜ 记录条数：${state.entries.length} ｜ 周计划数：${Object.keys(state.weekPlans).length}
+        模块数：${state.modules.length} ｜ 记录条数：${state.entries.length} ｜ 日计划数：${Object.keys(state.dayPlans).length} ｜ 日志数：${Object.keys(state.logs).length}
       </div>
     </div>
   `;
@@ -1192,9 +1310,10 @@ function renderSettings(app) {
         if (!confirm('导入会覆盖当前所有数据，确定继续？')) return;
         state = data;
         state.settings = Object.assign({ weekStart: 1, minUnit: 15, theme: 'light' }, state.settings || {});
+        state.dayPlans = state.dayPlans || {};
+        state.logs = state.logs || {};
         save();
         document.documentElement.dataset.theme = state.settings.theme;
-        planWeek = getWeekStart(todayStr());
         reviewWeek = getWeekStart(todayStr());
         toast('导入成功');
         render();
@@ -1206,7 +1325,7 @@ function renderSettings(app) {
   };
 
   $('#resetBtn').onclick = async () => {
-    if (!confirm('确定清空所有模块、记录和周计划？此操作不可恢复。')) return;
+    if (!confirm('确定清空所有数据？此操作不可恢复。')) return;
     if (!confirm('再确认一次：真的要清空吗？')) return;
     await clearCloud();
     localStorage.removeItem(STORE_KEY);
@@ -1222,7 +1341,8 @@ function init() {
   state = loadState();
   document.documentElement.dataset.theme = state.settings.theme || 'light';
 
-  planWeek = getWeekStart(todayStr());
+  viewDate = todayStr();
+  planDate = todayStr();
   reviewWeek = getWeekStart(todayStr());
 
   $('#tabs').addEventListener('click', e => {

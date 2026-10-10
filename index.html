@@ -48,15 +48,13 @@ body::before{
 }
 .brand{font-weight:600;font-size:14px;white-space:nowrap;color:var(--text)}
 .menu-btn{
-  display:flex;flex-direction:column;justify-content:center;gap:3px;
-  width:32px;height:32px;padding:7px;border-radius:8px;
+  display:flex;align-items:center;justify-content:center;
+  width:34px;height:34px;padding:0;border-radius:8px;
   border:1px solid var(--border);background:transparent;cursor:pointer;
-  transition:.15s;flex:0 0 auto;
+  color:var(--text);transition:.15s;flex:0 0 auto;
 }
-.menu-btn:hover{border-color:var(--accent)}
-.menu-btn span{
-  display:block;height:2px;background:var(--text);border-radius:2px;transition:.15s;
-}
+.menu-btn:hover{border-color:var(--accent);color:var(--accent)}
+.menu-btn svg{display:block}
 .tabs{
   position:absolute;top:calc(100% + 6px);right:12px;
   display:none;flex-direction:column;gap:2px;
@@ -187,7 +185,11 @@ textarea{width:100%;resize:vertical;min-height:90px;line-height:1.6}
 <header class="topbar">
   <div class="brand">⏳ 人生时间仪表盘</div>
   <button class="menu-btn" id="menuBtn" aria-label="菜单">
-    <span></span><span></span><span></span>
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+      <line x1="3" y1="6" x2="21" y2="6"/>
+      <line x1="3" y1="12" x2="21" y2="12"/>
+      <line x1="3" y1="18" x2="21" y2="18"/>
+    </svg>
   </button>
   <nav class="tabs" id="tabs">
     <button class="tab active" data-view="dashboard">仪表盘</button>
@@ -329,15 +331,12 @@ function save() {
 function applyAppearance() {
   const s = state.settings;
 
-  // 主色调
   if (s.accentColor) document.documentElement.style.setProperty('--accent', s.accentColor);
   else document.documentElement.style.removeProperty('--accent');
 
-  // 文字颜色
   if (s.textColor) document.documentElement.style.setProperty('--text', s.textColor);
   else document.documentElement.style.removeProperty('--text');
 
-  // 背景图
   const body = document.body;
   if (s.bgImage) {
     body.style.backgroundImage = `url(${s.bgImage})`;
@@ -345,17 +344,11 @@ function applyAppearance() {
     body.style.backgroundImage = '';
   }
 
-  // 遮罩暗度
   document.documentElement.style.setProperty('--overlay-alpha', (s.bgOverlay || 0) / 100);
-
-  // 卡片透明度
   document.documentElement.style.setProperty('--card-alpha', (s.cardAlpha || 100) / 100);
-
-  // 主题
   document.documentElement.dataset.theme = s.theme || 'light';
 }
 
-/* 图片压缩到 base64 */
 function compressImage(file, maxWidth = 1920, quality = 0.82) {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -1542,7 +1535,6 @@ function renderSettings(app) {
     </div>
   `;
 
-  // 背景图上传
   $('#bgUploadBtn').onclick = () => $('#bgFile').click();
   $('#bgFile').onchange = async e => {
     const file = e.target.files[0];
@@ -1570,7 +1562,6 @@ function renderSettings(app) {
     render();
   };
 
-  // 遮罩暗度
   $('#bgOverlay').oninput = e => {
     const v = Number(e.target.value);
     state.settings.bgOverlay = v;
@@ -1579,7 +1570,6 @@ function renderSettings(app) {
   };
   $('#bgOverlay').onchange = () => { save(); };
 
-  // 卡片透明度
   $('#cardAlpha').oninput = e => {
     const v = Number(e.target.value);
     state.settings.cardAlpha = v;
@@ -1588,7 +1578,6 @@ function renderSettings(app) {
   };
   $('#cardAlpha').onchange = () => { save(); };
 
-  // 主色调
   $('#accentColor').oninput = e => {
     state.settings.accentColor = e.target.value;
     document.documentElement.style.setProperty('--accent', e.target.value);
@@ -1600,7 +1589,6 @@ function renderSettings(app) {
     save(); render();
   };
 
-  // 文字颜色
   $('#textColor').oninput = e => {
     state.settings.textColor = e.target.value;
     document.documentElement.style.setProperty('--text', e.target.value);
@@ -1612,7 +1600,6 @@ function renderSettings(app) {
     save(); render();
   };
 
-  // 主题
   $('#setTheme').onchange = e => {
     state.settings.theme = e.target.value;
     applyAppearance();

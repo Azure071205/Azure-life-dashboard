@@ -29,7 +29,7 @@ html[data-theme="dark"]{
 }
 html,body{min-height:100%}
 body{
-  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Hiragino Sans GB","Microsoft YaHei","Helvetica Neue",Arial,sans-serif;
+  font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Hiragino Sans GB","Microsoft YaHei","Helvetica Neue",Arial,sans-serif;
   background-color:var(--bg);color:var(--text);min-height:100vh;-webkit-font-smoothing:antialiased;
   background-size:cover;background-position:center;background-attachment:fixed;background-repeat:no-repeat;
   transition:background-color .2s,color .2s;
@@ -40,22 +40,53 @@ body::before{
 }
 .topbar,main,.toast,.modal-mask{position:relative;z-index:1}
 .topbar{
-  display:flex;align-items:center;gap:16px;padding:14px 22px;
+  display:flex;align-items:center;justify-content:space-between;gap:10px;
+  padding:8px 14px;
   background:rgb(var(--panel-rgb) / var(--card-alpha));
-  border-bottom:1px solid var(--border);position:sticky;top:0;z-index:50;flex-wrap:wrap;
+  border-bottom:1px solid var(--border);position:sticky;top:0;z-index:50;
   backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);
 }
-.brand{font-weight:700;font-size:16px;white-space:nowrap}
-.tabs{display:flex;gap:4px;flex-wrap:wrap}
-.tab{
-  border:none;background:transparent;color:var(--dim);padding:7px 14px;border-radius:9px;
-  font-size:14px;cursor:pointer;font-family:inherit;transition:.15s;
+.brand{font-weight:600;font-size:14px;white-space:nowrap;color:var(--text)}
+.menu-btn{
+  display:flex;flex-direction:column;justify-content:center;gap:3px;
+  width:32px;height:32px;padding:7px;border-radius:8px;
+  border:1px solid var(--border);background:transparent;cursor:pointer;
+  transition:.15s;flex:0 0 auto;
 }
-.tab:hover{background:var(--accent-soft);color:var(--text)}
-.tab.active{background:var(--accent);color:#fff}
-.auth-area{margin-left:auto;display:flex;align-items:center;gap:10px}
-.auth-status{font-size:12px;color:var(--dim);max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-main{max-width:1180px;margin:0 auto;padding:22px 18px 60px}
+.menu-btn:hover{border-color:var(--accent)}
+.menu-btn span{
+  display:block;height:2px;background:var(--text);border-radius:2px;transition:.15s;
+}
+.tabs{
+  position:absolute;top:calc(100% + 6px);right:12px;
+  display:none;flex-direction:column;gap:2px;
+  background:rgb(var(--panel-rgb) / 1);
+  border:1px solid var(--border);border-radius:12px;padding:6px;
+  min-width:180px;
+  box-shadow:0 10px 30px rgba(0,0,0,.14);
+  z-index:60;
+}
+.tabs.open{display:flex}
+.tab{
+  border:none;background:transparent;color:var(--text);padding:8px 12px;border-radius:7px;
+  font-size:13px;cursor:pointer;font-family:inherit;transition:.15s;
+  text-align:left;width:100%;
+}
+.tab:hover{background:var(--accent-soft)}
+.tab.active{background:var(--accent);color:#fff;font-weight:500}
+.menu-divider{
+  height:1px;background:var(--border);margin:5px 4px;
+}
+.menu-auth{
+  display:flex;flex-direction:column;gap:6px;padding:4px;
+}
+.auth-status{
+  font-size:11px;color:var(--dim);
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+  padding:2px 4px;
+}
+.menu-auth .btn{width:100%;text-align:center;padding:7px 12px;font-size:12.5px}
+main{max-width:1180px;margin:0 auto;padding:16px 14px 60px}
 .section-head{display:flex;align-items:baseline;justify-content:space-between;margin:22px 0 12px;flex-wrap:wrap;gap:8px}
 .section-head h2{font-size:18px}
 .section-head h3{font-size:15px}
@@ -103,7 +134,7 @@ textarea{width:100%;resize:vertical;min-height:90px;line-height:1.6}
 .btn.primary:hover{opacity:.88;color:#fff}
 .btn.danger{color:var(--red);border-color:var(--border)}
 .btn.danger:hover{border-color:var(--red)}
-.btn.sm{padding:5px 10px;font-size:12px}
+.btn.sm{padding:4px 9px;font-size:11.5px}
 .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
 .form-card{background:rgb(var(--card-rgb) / var(--card-alpha));border:1px solid var(--border);border-radius:var(--radius);padding:16px;margin-bottom:16px}
 .entry{
@@ -155,6 +186,9 @@ textarea{width:100%;resize:vertical;min-height:90px;line-height:1.6}
 
 <header class="topbar">
   <div class="brand">⏳ 人生时间仪表盘</div>
+  <button class="menu-btn" id="menuBtn" aria-label="菜单">
+    <span></span><span></span><span></span>
+  </button>
   <nav class="tabs" id="tabs">
     <button class="tab active" data-view="dashboard">仪表盘</button>
     <button class="tab" data-view="log">记录</button>
@@ -162,11 +196,12 @@ textarea{width:100%;resize:vertical;min-height:90px;line-height:1.6}
     <button class="tab" data-view="modules">模块</button>
     <button class="tab" data-view="review">回顾</button>
     <button class="tab" data-view="settings">设置</button>
+    <div class="menu-divider"></div>
+    <div class="menu-auth">
+      <div class="auth-status" id="authStatus"></div>
+      <button class="btn sm" id="authBtn">登录 / 注册</button>
+    </div>
   </nav>
-  <div class="auth-area">
-    <span class="auth-status" id="authStatus"></span>
-    <button class="btn sm" id="authBtn">登录 / 注册</button>
-  </div>
 </header>
 
 <main id="app"></main>
@@ -235,7 +270,8 @@ function defaultState() {
   return {
     settings: {
       weekStart: 1, minUnit: 15, theme: 'light',
-      bgImage: '', bgOverlay: 0, cardAlpha: 100, bgBlur: 0
+      bgImage: '', bgOverlay: 0, cardAlpha: 100, bgBlur: 0,
+      accentColor: '', textColor: ''
     },
     modules: [
       { id: 'm_sleep',   name: '睡眠',      color: '#7c5cff', type: 'fixed',  weekly: 3150, parentId: null, order: 0,  archived: false },
@@ -267,7 +303,8 @@ function loadState() {
       const s = JSON.parse(raw);
       s.settings = Object.assign({
         weekStart: 1, minUnit: 15, theme: 'light',
-        bgImage: '', bgOverlay: 0, cardAlpha: 100, bgBlur: 0
+        bgImage: '', bgOverlay: 0, cardAlpha: 100, bgBlur: 0,
+        accentColor: '', textColor: ''
       }, s.settings || {});
       s.modules = s.modules || [];
       s.dayPlans = s.dayPlans || {};
@@ -291,15 +328,21 @@ function save() {
 /* ==================== 外观应用 ==================== */
 function applyAppearance() {
   const s = state.settings;
-  const body = document.body;
 
-  // 背景图（只存本地，不同步云端）
+  // 主色调
+  if (s.accentColor) document.documentElement.style.setProperty('--accent', s.accentColor);
+  else document.documentElement.style.removeProperty('--accent');
+
+  // 文字颜色
+  if (s.textColor) document.documentElement.style.setProperty('--text', s.textColor);
+  else document.documentElement.style.removeProperty('--text');
+
+  // 背景图
+  const body = document.body;
   if (s.bgImage) {
     body.style.backgroundImage = `url(${s.bgImage})`;
-    body.style.backgroundColor = '';
   } else {
     body.style.backgroundImage = '';
-    body.style.backgroundColor = '';
   }
 
   // 遮罩暗度
@@ -307,12 +350,6 @@ function applyAppearance() {
 
   // 卡片透明度
   document.documentElement.style.setProperty('--card-alpha', (s.cardAlpha || 100) / 100);
-
-  // 背景模糊
-  if (s.bgBlur && s.bgImage) {
-    body.style.filter = '';
-    // 用伪元素实现模糊比较麻烦，这里简化：不模糊页面本身，用遮罩模拟
-  }
 
   // 主题
   document.documentElement.dataset.theme = s.theme || 'light';
@@ -945,7 +982,7 @@ function tickTimer() {
   el.textContent = `${h}:${m}:${s}`;
 }
 
-/* ==================== 计划页（日计划 + 周汇总） ==================== */
+/* ==================== 计划页 ==================== */
 function renderPlan(app) {
   const day = planDate;
   const dObj = parseDate(day);
@@ -1437,6 +1474,22 @@ function renderSettings(app) {
         <div class="muted">值越小，卡片越透，能看到更多背景。</div>
       </div>
 
+      <div class="field">
+        <label>主色调（按钮、高亮）</label>
+        <div class="row">
+          <input type="color" id="accentColor" value="${s.accentColor || '#5b5bd6'}">
+          <button class="btn sm" id="accentReset">恢复默认</button>
+        </div>
+      </div>
+
+      <div class="field">
+        <label>文字颜色</label>
+        <div class="row">
+          <input type="color" id="textColor" value="${s.textColor || (s.theme === 'dark' ? '#e8eaf0' : '#16181f')}">
+          <button class="btn sm" id="textReset">恢复默认</button>
+        </div>
+      </div>
+
       <div class="field"><label>主题</label>
         <select id="setTheme">
           <option value="light" ${s.theme === 'light' ? 'selected' : ''}>浅色</option>
@@ -1535,6 +1588,30 @@ function renderSettings(app) {
   };
   $('#cardAlpha').onchange = () => { save(); };
 
+  // 主色调
+  $('#accentColor').oninput = e => {
+    state.settings.accentColor = e.target.value;
+    document.documentElement.style.setProperty('--accent', e.target.value);
+  };
+  $('#accentColor').onchange = () => { save(); };
+  $('#accentReset').onclick = () => {
+    state.settings.accentColor = '';
+    document.documentElement.style.removeProperty('--accent');
+    save(); render();
+  };
+
+  // 文字颜色
+  $('#textColor').oninput = e => {
+    state.settings.textColor = e.target.value;
+    document.documentElement.style.setProperty('--text', e.target.value);
+  };
+  $('#textColor').onchange = () => { save(); };
+  $('#textReset').onclick = () => {
+    state.settings.textColor = '';
+    document.documentElement.style.removeProperty('--text');
+    save(); render();
+  };
+
   // 主题
   $('#setTheme').onchange = e => {
     state.settings.theme = e.target.value;
@@ -1614,7 +1691,8 @@ function renderSettings(app) {
         state = data;
         state.settings = Object.assign({
           weekStart: 1, minUnit: 15, theme: 'light',
-          bgImage: '', bgOverlay: 0, cardAlpha: 100, bgBlur: 0
+          bgImage: '', bgOverlay: 0, cardAlpha: 100, bgBlur: 0,
+          accentColor: '', textColor: ''
         }, state.settings || {});
         state.dayPlans = state.dayPlans || {};
         state.logs = state.logs || {};
@@ -1670,7 +1748,19 @@ function init() {
     $$('.tab').forEach(t => t.classList.remove('active'));
     btn.classList.add('active');
     currentView = btn.dataset.view;
+    $('#tabs').classList.remove('open');
     render();
+  });
+
+  $('#menuBtn').addEventListener('click', e => {
+    e.stopPropagation();
+    $('#tabs').classList.toggle('open');
+  });
+
+  document.addEventListener('click', e => {
+    if (!e.target.closest('#tabs') && !e.target.closest('#menuBtn')) {
+      $('#tabs').classList.remove('open');
+    }
   });
 
   $('#authBtn').onclick = () => {

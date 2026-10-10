@@ -3,6 +3,12 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#5b5bd6">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="人生仪表盘">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'%3E%3Crect width='192' height='192' rx='36' fill='%235b5bd6'/%3E%3Ctext x='96' y='132' font-size='110' text-anchor='middle' fill='white'%3E%E2%8F%B3%3C/text%3E%3C/svg%3E">
 <title>人生时间仪表盘</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -62,7 +68,7 @@ main{max-width:1180px;margin:0 auto;padding:22px 18px 60px}
 @media(max-width:760px){.charts{grid-template-columns:1fr}}
 .card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:16px}
 .card-title{font-size:13px;font-weight:600;margin-bottom:12px;color:var(--dim)}
-canvas{max-height:270px}
+canvas{max-height:280px}
 table{width:100%;border-collapse:collapse;font-size:13px}
 th,td{padding:9px 10px;text-align:left;border-bottom:1px solid var(--border)}
 th{color:var(--dim);font-weight:500;font-size:12px}
@@ -118,6 +124,12 @@ textarea{width:100%;resize:vertical;min-height:90px;line-height:1.6}
   padding:10px 20px;border-radius:99px;font-size:13px;z-index:200;opacity:0;transition:.3s;pointer-events:none;
 }
 .toast.show{opacity:1}
+/* 热力图 */
+.heat-wrap{display:grid;grid-auto-flow:column;grid-template-rows:repeat(7,14px);gap:3px;overflow-x:auto;padding:4px 0}
+.heat-cell{width:14px;height:14px;border-radius:3px;background:var(--accent-soft);cursor:pointer;transition:.15s}
+.heat-cell:hover{transform:scale(1.2)}
+.heat-legend{display:flex;gap:6px;align-items:center;margin-top:10px;font-size:11px;color:var(--dim)}
+.heat-legend .heat-cell{width:12px;height:12px}
 </style>
 </head>
 <body>
@@ -188,13 +200,25 @@ function toast(msg) {
   clearTimeout(t._tid);
   t._tid = setTimeout(() => t.classList.remove('show'), 1800);
 }
+function download(filename, content, type) {
+  const blob = new Blob([content], { type });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
 
 /* ==================== 状态与持久化 ==================== */
 const STORE_KEY = 'life_dashboard_v1';
+const REMIND_KEY = 'life_dashboard_last_reminder';
 
 function defaultState() {
   return {
-    settings: { weekStart: 1, minUnit: 15, theme: 'light' },
+    settings: {
+      weekStart: 1, minUnit: 15, theme: 'light',
+      reminderEnabled: false, reminderTime: '22:00'
+    },
     modules: [
       { id: 'm_sleep',   name: '睡眠',      color: '#7c5cff', type: 'fixed',  weekly: 3150, parentId: null, order: 0,  archived: false },
       { id: 'm_work',    name: '工作/学业', color: '#3b82f6', type: 'manual', weekly: 2400, parentId: null, order: 1,  archived: false },
@@ -210,8 +234,8 @@ function defaultState() {
       { id: 'm_reflect', name: '精神反思',  color: '#14b8a6', type: 'manual', weekly: 120,  parentId: null, order: 11, archived: false },
       { id: 'm_other',   name: '未分类',    color: '#9ca3af', type: 'record', weekly: 0,    parentId: null, order: 12, archived: false }
     ],
-    dayPlans: {},  // { "2026-10-10": { "m_work": 480 } }
-    logs: {},      // { "2026-10-10": "今天..." }
+    dayPlans: {},
+    logs: {},
     entries: []
   };
 }
@@ -223,7 +247,10 @@ function loadState() {
     const raw = localStorage.getItem(STORE_KEY);
     if (raw) {
       const s = JSON.parse(raw);
-      s.settings = Object.assign({ weekStart: 1, minUnit: 15, theme: 'light' }, s.settings || {});
+      s.settings = Object.assign({
+        weekStart: 1, minUnit: 15, theme: 'light',
+        reminderEnabled: false, reminderTime: '22:00'
+      }, s.settings || {});
       s.modules = s.modules || [];
       s.dayPlans = s.dayPlans || {};
       s.logs = s.logs || {};
@@ -272,7 +299,6 @@ async function syncToCloud() {
       }
     }
 
-    // 日计划
     const dayPlanKeys = Object.keys(state.dayPlans);
     if (dayPlanKeys.length) {
       const payload = dayPlanKeys.map(d => ({
@@ -283,7 +309,6 @@ async function syncToCloud() {
       if (error) console.error('同步日计划失败', error);
     }
 
-    // 每日日志
     const logKeys = Object.keys(state.logs);
     if (logKeys.length) {
       const payload = logKeys.map(d => ({
@@ -303,23 +328,15 @@ async function syncToCloud() {
 async function syncFromCloud() {
   if (!currentUser || !sbClient) return;
   try {
-    const { data: cm, error: e1 } = await sbClient.from('modules').select('*');
-    if (e1) throw e1;
-
-    const { data: ce, error: e2 } = await sbClient.from('entries').select('*');
-    if (e2) throw e2;
-
-    const { data: cdp, error: e3 } = await sbClient.from('day_plans').select('*');
-    if (e3) console.warn('day_plans 表不存在或拉取失败（可忽略，去建表）', e3);
-
-    const { data: cl, error: e4 } = await sbClient.from('daily_logs').select('*');
-    if (e4) console.warn('daily_logs 表不存在或拉取失败（可忽略，去建表）', e4);
+    const { data: cm } = await sbClient.from('modules').select('*');
+    const { data: ce } = await sbClient.from('entries').select('*');
+    const { data: cdp } = await sbClient.from('day_plans').select('*');
+    const { data: cl } = await sbClient.from('daily_logs').select('*');
 
     const cloudEmpty = (!cm || cm.length === 0) && (!ce || ce.length === 0)
                     && (!cdp || cdp.length === 0) && (!cl || cl.length === 0);
 
     if (cloudEmpty) {
-      console.log('☁️ 云端为空，上传本地数据');
       await syncToCloud();
       save();
       render();
@@ -332,26 +349,19 @@ async function syncFromCloud() {
         weekly: item.weekly, parentId: item.parent_id, order: item.order, archived: item.archived
       }));
     }
-
     if (ce) {
       state.entries = ce.map(item => ({
         id: item.id, date: item.date, start: item.start_time, end: item.end_time,
         duration: item.duration, moduleId: item.module_id, note: item.note, createdAt: item.created_at
       }));
     }
-
     if (cdp) {
       state.dayPlans = {};
-      cdp.forEach(item => {
-        state.dayPlans[item.date] = item.targets || {};
-      });
+      cdp.forEach(item => { state.dayPlans[item.date] = item.targets || {}; });
     }
-
     if (cl) {
       state.logs = {};
-      cl.forEach(item => {
-        state.logs[item.date] = item.content || '';
-      });
+      cl.forEach(item => { state.logs[item.date] = item.content || ''; });
     }
 
     save();
@@ -365,9 +375,7 @@ async function syncFromCloud() {
 async function deleteFromCloud(table, id) {
   if (!currentUser || !sbClient) return;
   try {
-    const { error } = await sbClient.from(table).delete().eq('id', id).eq('user_id', currentUser.id);
-    if (error) console.error('云端删除失败', table, id, error);
-    else console.log('☁️ 云端已删除', table, id);
+    await sbClient.from(table).delete().eq('id', id).eq('user_id', currentUser.id);
   } catch (e) { console.error('云端删除异常', e); }
 }
 
@@ -378,7 +386,6 @@ async function clearCloud() {
     await sbClient.from('entries').delete().eq('user_id', currentUser.id);
     await sbClient.from('day_plans').delete().eq('user_id', currentUser.id);
     await sbClient.from('daily_logs').delete().eq('user_id', currentUser.id);
-    console.log('☁️ 云端已清空');
   } catch (e) { console.error('清空云端失败', e); }
 }
 
@@ -500,7 +507,7 @@ let currentView = 'dashboard';
 let viewDate = todayStr();
 let planDate = todayStr();
 let reviewWeek = null;
-let donutChart = null, stackChart = null;
+let donutChart = null, stackChart = null, trendChart = null;
 
 function render() {
   const app = $('#app');
@@ -687,6 +694,7 @@ function renderLog(app) {
         <input type="date" id="datePick" value="${viewDate}">
         <button class="btn sm" id="nextDay">后一天 →</button>
         <button class="btn sm" id="todayBtn">今天</button>
+        <button class="btn sm primary" id="addModFromLog">+ 新增模块</button>
       </div>
     </div>
 
@@ -775,11 +783,8 @@ function renderLog(app) {
     clearTimeout(logTimer);
     logTimer = setTimeout(() => {
       const text = logArea.value;
-      if (text.trim()) {
-        state.logs[viewDate] = text;
-      } else {
-        delete state.logs[viewDate];
-      }
+      if (text.trim()) state.logs[viewDate] = text;
+      else delete state.logs[viewDate];
       save();
       if (logStatus) logStatus.textContent = '已保存 ' + new Date().toLocaleTimeString();
     }, 800);
@@ -796,6 +801,7 @@ function renderLog(app) {
   $('#nextDay').onclick = () => { viewDate = fmtDate(new Date(parseDate(viewDate).getTime() + 864e5)); render(); };
   $('#todayBtn').onclick = () => { viewDate = todayStr(); render(); };
   $('#datePick').onchange = e => { viewDate = e.target.value; render(); };
+  $('#addModFromLog').onclick = () => openModuleModal(null);
 
   $('#addBtn').onclick = () => {
     const moduleId = $('#addModule').value;
@@ -876,13 +882,9 @@ function renderPlan(app) {
   const days = getWeekDays(ws);
   const mods = state.modules.filter(m => !m.archived).sort((a, b) => a.order - b.order);
 
-  // 当天目标
   const dayTargets = {};
-  mods.forEach(m => {
-    dayTargets[m.id] = getDayTarget(day, m.id);
-  });
+  mods.forEach(m => { dayTargets[m.id] = getDayTarget(day, m.id); });
 
-  // 当天统计
   const DAY_TOTAL = 24 * 60;
   let dayFixed = 0, dayManual = 0;
   mods.forEach(m => {
@@ -893,9 +895,7 @@ function renderPlan(app) {
   const dayAlloc = DAY_TOTAL - dayFixed;
   const dayRest = dayAlloc - dayManual;
 
-  // 周汇总
   const weekTotals = getWeekTargets(ws);
-
   const typeLabel = { fixed: '固定', manual: '手动目标', record: '仅记录' };
 
   app.innerHTML = `
@@ -906,6 +906,7 @@ function renderPlan(app) {
         <input type="date" id="datePick" value="${day}">
         <button class="btn sm" id="nextDay">后一天 →</button>
         <button class="btn sm" id="todayBtn">今天</button>
+        <button class="btn sm primary" id="addModFromPlan">+ 新增模块</button>
       </div>
     </div>
 
@@ -940,7 +941,6 @@ function renderPlan(app) {
     </div>
   `;
 
-  // 渲染日计划表
   const dayBody = $('#dayBody');
   mods.forEach(m => {
     const tr = document.createElement('tr');
@@ -969,7 +969,6 @@ function renderPlan(app) {
     render();
   });
 
-  // 渲染周汇总表
   const weekBody = $('#weekBody');
   mods.forEach(m => {
     const tr = document.createElement('tr');
@@ -985,7 +984,9 @@ function renderPlan(app) {
   $('#prevDay').onclick = () => { planDate = fmtDate(new Date(parseDate(planDate).getTime() - 864e5)); render(); };
   $('#nextDay').onclick = () => { planDate = fmtDate(new Date(parseDate(planDate).getTime() + 864e5)); render(); };
   $('#todayBtn').onclick = () => { planDate = todayStr(); render(); };
+  $('#datePicker')?.addEventListener('change', () => {});
   $('#datePick').onchange = e => { planDate = e.target.value; render(); };
+  $('#addModFromPlan').onclick = () => openModuleModal(null);
 }
 
 /* ==================== 模块管理页 ==================== */
@@ -1007,7 +1008,6 @@ function renderModules(app) {
     </div>
     <div class="muted" style="margin-top:12px">
       固定 = 每天写死（如睡眠）；手动目标 = 每天可在「计划」里调整；仅记录 = 不设目标，只统计实际。
-      「默认每日目标」会自动 ×7 作为一周的目标参考。
     </div>
   `;
 
@@ -1084,7 +1084,6 @@ function openModuleModal(id) {
       </div>
       <div class="field"><label>默认每日目标（小时）</label>
         <input type="number" id="mDaily" step="0.25" min="0" value="${dailyHours.toFixed(2)}">
-        <div class="muted" style="margin-top:5px">周目标 = 每日 × 7</div>
       </div>
       <div class="field"><label>父模块（可选）</label>
         <select id="mParent">
@@ -1110,7 +1109,7 @@ function openModuleModal(id) {
     m.color = $('#mColor', mask).value;
     m.type = $('#mType', mask).value;
     const dailyH = parseFloat($('#mDaily', mask).value) || 0;
-    m.weekly = Math.round(dailyH * 7 * 60); // 存为周目标（分钟）
+    m.weekly = Math.round(dailyH * 7 * 60);
     m.parentId = $('#mParent', mask).value || null;
 
     if (isNew) state.modules.push(m);
@@ -1147,7 +1146,6 @@ function renderReview(app) {
   const dayTotals = days.map(d => state.entries.filter(e => e.date === d).reduce((s, e) => s + e.duration, 0));
   const maxDay = Math.max(...dayTotals, 1);
 
-  // 该周的日志
   const weekLogs = days.filter(d => state.logs[d]).map(d => ({ date: d, content: state.logs[d] }));
 
   app.innerHTML = `
@@ -1184,6 +1182,25 @@ function renderReview(app) {
     </div>
 
     <div class="card" style="margin-bottom:16px">
+      <div class="card-title">近 8 周趋势（小时）</div>
+      <canvas id="trendCanvas"></canvas>
+    </div>
+
+    <div class="card" style="margin-bottom:16px">
+      <div class="card-title">近 12 周记录热力图</div>
+      <div class="heat-wrap" id="heatWrap"></div>
+      <div class="heat-legend">
+        <span>少</span>
+        <span class="heat-cell" style="background:var(--accent-soft)"></span>
+        <span class="heat-cell" style="background:rgba(91,91,214,.35)"></span>
+        <span class="heat-cell" style="background:rgba(91,91,214,.6)"></span>
+        <span class="heat-cell" style="background:rgba(91,91,214,.85)"></span>
+        <span class="heat-cell" style="background:var(--accent)"></span>
+        <span>多</span>
+      </div>
+    </div>
+
+    <div class="card" style="margin-bottom:16px">
       <div class="card-title">目标 vs 实际</div>
       <table>
         <thead><tr><th>模块</th><th>类型</th><th>目标</th><th>实际</th><th>差额</th></tr></thead>
@@ -1216,9 +1233,108 @@ function renderReview(app) {
     ` : ''}
   `;
 
+  drawTrend(mods);
+  drawHeatmap();
+
   $('#prevR').onclick = () => { reviewWeek = shiftWeek(reviewWeek, -1); render(); };
   $('#nextR').onclick = () => { reviewWeek = shiftWeek(reviewWeek, 1); render(); };
   $('#thisR').onclick = () => { reviewWeek = getWeekStart(todayStr()); render(); };
+}
+
+function drawTrend(mods) {
+  const cv = $('#trendCanvas');
+  if (!cv || typeof Chart === 'undefined') return;
+  if (trendChart) trendChart.destroy();
+
+  // 近 8 周
+  const weeks = [];
+  let w = getWeekStart(todayStr());
+  for (let i = 7; i >= 0; i--) weeks.push(shiftWeek(w, -i));
+
+  // 找出 8 周内有数据的模块，最多 8 个
+  const activeMods = mods.filter(m => {
+    if (m.type === 'record') return false;
+    return weeks.some(ws => (getWeekActuals(ws)[m.id] || 0) > 0);
+  }).slice(0, 8);
+
+  if (!activeMods.length) {
+    cv.parentElement.innerHTML = '<div class="card-title">近 8 周趋势（小时）</div><div class="empty">还没有足够数据</div>';
+    return;
+  }
+
+  const dark = state.settings.theme === 'dark';
+  const tickColor = dark ? '#8b92a4' : '#6b7280';
+  const gridColor = dark ? '#262b38' : '#e6e8ee';
+
+  const datasets = activeMods.map(m => ({
+    label: m.name,
+    data: weeks.map(ws => ((getWeekActuals(ws)[m.id] || 0) / 60)),
+    borderColor: m.color,
+    backgroundColor: m.color + '22',
+    tension: 0.3,
+    borderWidth: 2,
+    pointRadius: 3
+  }));
+
+  trendChart = new Chart(cv, {
+    type: 'line',
+    data: { labels: weeks.map(w => w.slice(5)), datasets },
+    options: {
+      responsive: true, maintainAspectRatio: true,
+      scales: {
+        x: { grid: { display: false }, ticks: { color: tickColor, font: { size: 11 } } },
+        y: { grid: { color: gridColor }, ticks: { color: tickColor, font: { size: 11 } }, beginAtZero: true }
+      },
+      plugins: {
+        legend: { labels: { color: tickColor, boxWidth: 10, font: { size: 11 } } },
+        tooltip: { callbacks: { label: c => ` ${c.dataset.label}: ${c.parsed.y.toFixed(1)}h` } }
+      }
+    }
+  });
+}
+
+function drawHeatmap() {
+  const wrap = $('#heatWrap');
+  if (!wrap) return;
+
+  // 近 12 周 = 84 天
+  const today = new Date();
+  const cells = [];
+  for (let i = 83; i >= 0; i--) {
+    const d = new Date(today);
+    d.setDate(d.getDate() - i);
+    const ds = fmtDate(d);
+    const total = state.entries.filter(e => e.date === ds).reduce((s, e) => s + e.duration, 0);
+    const hasLog = state.logs[ds] && state.logs[ds].trim();
+    cells.push({ date: ds, total, hasLog });
+  }
+
+  const max = Math.max(...cells.map(c => c.total), 1);
+
+  // 网格按列排列（每周一列），需要补齐头部
+  const firstDate = parseDate(cells[0].date);
+  const firstDay = firstDate.getDay(); // 0=周日
+  const ws = state.settings.weekStart;
+  const offset = (firstDay - ws + 7) % 7;
+  const padded = [];
+  for (let i = 0; i < offset; i++) padded.push(null);
+  padded.push(...cells);
+
+  wrap.innerHTML = padded.map(c => {
+    if (!c) return '<div></div>';
+    let bg = 'var(--accent-soft)';
+    if (c.total > 0) {
+      const ratio = c.total / max;
+      let alpha = 0.35;
+      if (ratio > 0.75) alpha = 1;
+      else if (ratio > 0.5) alpha = 0.85;
+      else if (ratio > 0.25) alpha = 0.6;
+      bg = `rgba(91,91,214,${alpha})`;
+    }
+    const title = `${c.date}\n记录：${fmtDuration(c.total)}${c.hasLog ? '\n有日志' : ''}`;
+    const border = c.hasLog ? '2px solid var(--green)' : 'none';
+    return `<div class="heat-cell" style="background:${bg};border:${border}" title="${esc(title)}"></div>`;
+  }).join('');
 }
 
 /* ==================== 设置页 ==================== */
@@ -1252,15 +1368,35 @@ function renderSettings(app) {
     </div>
 
     <div class="card" style="margin-bottom:16px">
-      <div class="card-title">数据管理</div>
+      <div class="card-title">每日提醒</div>
+      <div class="field"><label>启用提醒</label>
+        <select id="reminderEnabled">
+          <option value="0" ${!s.reminderEnabled ? 'selected' : ''}>关闭</option>
+          <option value="1" ${s.reminderEnabled ? 'selected' : ''}>开启</option>
+        </select>
+      </div>
+      <div class="field"><label>提醒时间</label>
+        <input type="time" id="reminderTime" value="${s.reminderTime || '22:00'}">
+      </div>
       <div class="row">
-        <button class="btn" id="exportBtn">导出 JSON</button>
+        <button class="btn" id="testNotify">测试通知</button>
+        <button class="btn" id="requestPerm">请求通知权限</button>
+      </div>
+      <div class="muted" style="margin-top:12px">
+        提醒只在页面打开时生效。手机浏览器可能会暂停后台页面，这是浏览器限制。<br>
+        提示：把页面添加到主屏幕，可以让提醒更稳定。
+      </div>
+    </div>
+
+    <div class="card" style="margin-bottom:16px">
+      <div class="card-title">导出</div>
+      <div class="row">
+        <button class="btn" id="exportBtn">导出 JSON（完整备份）</button>
+        <button class="btn" id="exportMd">导出 Markdown（日志+回顾）</button>
+        <button class="btn" id="exportCsv">导出 CSV（记录明细）</button>
         <button class="btn" id="importBtn">导入 JSON</button>
         <input type="file" id="importFile" accept=".json" style="display:none">
         <button class="btn danger" id="resetBtn">清空所有数据</button>
-      </div>
-      <div class="muted" style="margin-top:12px">
-        数据保存在浏览器本地，登录后自动同步到云端。
       </div>
     </div>
 
@@ -1287,15 +1423,75 @@ function renderSettings(app) {
     save(); toast('已切换');
     if (currentView === 'dashboard') render();
   };
+  $('#reminderEnabled').onchange = e => { s.reminderEnabled = Number(e.target.value) === 1; save(); toast('已保存'); };
+  $('#reminderTime').onchange = e => { s.reminderTime = e.target.value || '22:00'; save(); toast('已保存'); };
+
+  $('#testNotify').onclick = () => {
+    sendNotification('测试通知', '这是人生时间仪表盘的提醒测试。');
+  };
+  $('#requestPerm').onclick = async () => {
+    if (!('Notification' in window)) { toast('该浏览器不支持通知'); return; }
+    const p = await Notification.requestPermission();
+    toast('通知权限：' + p);
+  };
 
   $('#exportBtn').onclick = () => {
-    const blob = new Blob([JSON.stringify(state, null, 2)], { type: 'application/json' });
-    const a = document.createElement('a');
-    a.href = URL.createObjectURL(blob);
-    a.download = `life-dashboard-${todayStr()}.json`;
-    a.click();
-    URL.revokeObjectURL(a.href);
+    download(`life-dashboard-${todayStr()}.json`, JSON.stringify(state, null, 2), 'application/json');
     toast('已导出');
+  };
+
+  $('#exportMd').onclick = () => {
+    let md = `# 人生时间仪表盘\n\n导出时间：${new Date().toLocaleString()}\n\n`;
+    // 日志
+    const logKeys = Object.keys(state.logs).sort();
+    if (logKeys.length) {
+      md += `## 每日日志\n\n`;
+      logKeys.forEach(d => {
+        md += `### ${d}\n\n${state.logs[d]}\n\n`;
+      });
+    }
+    // 每周汇总
+    md += `## 每周目标 vs 实际\n\n`;
+    const allWeeks = new Set();
+    state.entries.forEach(e => allWeeks.add(getWeekStart(e.date)));
+    // 加入本周
+    allWeeks.add(getWeekStart(todayStr()));
+    const weeksSorted = [...allWeeks].sort();
+    weeksSorted.forEach(ws => {
+      const mods = getWeekModules(ws);
+      const actuals = getWeekActuals(ws);
+      md += `### ${ws} ~ ${getWeekDays(ws)[6]}\n\n`;
+      md += `| 模块 | 目标 | 实际 | 差额 |\n|---|---:|---:|---:|\n`;
+      mods.forEach(m => {
+        const a = actuals[m.id] || 0;
+        const t = m.target || 0;
+        const diff = a - t;
+        md += `| ${m.name} | ${t ? fmtHours(t) : '—'} | ${fmtHours(a)} | ${t ? (diff >= 0 ? '+' : '') + fmtHours(diff) : '—'} |\n`;
+      });
+      md += `\n`;
+    });
+    download(`life-dashboard-logs-${todayStr()}.md`, md, 'text/markdown;charset=utf-8');
+    toast('已导出 Markdown');
+  };
+
+  $('#exportCsv').onclick = () => {
+    const headers = ['日期', '开始', '结束', '时长（分钟）', '模块', '备注'];
+    const rows = state.entries
+      .slice()
+      .sort((a, b) => a.date.localeCompare(b.date) || (a.start || '').localeCompare(b.start || ''))
+      .map(e => {
+        const m = state.modules.find(x => x.id === e.moduleId);
+        return [e.date, e.start || '', e.end || '', e.duration, m ? m.name : '已删除模块', e.note || ''];
+      });
+    const csv = [headers, ...rows].map(row => row.map(cell => {
+      const s = String(cell);
+      if (s.includes(',') || s.includes('"') || s.includes('\n')) {
+        return '"' + s.replace(/"/g, '""') + '"';
+      }
+      return s;
+    }).join(',')).join('\n');
+    download(`life-dashboard-entries-${todayStr()}.csv`, '\ufeff' + csv, 'text/csv;charset=utf-8');
+    toast('已导出 CSV');
   };
 
   $('#importBtn').onclick = () => $('#importFile').click();
@@ -1309,7 +1505,10 @@ function renderSettings(app) {
         if (!data.modules || !data.entries) throw new Error('格式不对');
         if (!confirm('导入会覆盖当前所有数据，确定继续？')) return;
         state = data;
-        state.settings = Object.assign({ weekStart: 1, minUnit: 15, theme: 'light' }, state.settings || {});
+        state.settings = Object.assign({
+          weekStart: 1, minUnit: 15, theme: 'light',
+          reminderEnabled: false, reminderTime: '22:00'
+        }, state.settings || {});
         state.dayPlans = state.dayPlans || {};
         state.logs = state.logs || {};
         save();
@@ -1336,6 +1535,65 @@ function renderSettings(app) {
   };
 }
 
+/* ==================== 提醒逻辑 ==================== */
+let reminderTimer = null;
+function startReminderLoop() {
+  if (reminderTimer) clearInterval(reminderTimer);
+  reminderTimer = setInterval(checkReminder, 30 * 1000); // 每 30 秒检查一次
+  checkReminder();
+}
+function checkReminder() {
+  if (!state || !state.settings.reminderEnabled) return;
+  const now = new Date();
+  const hhmm = pad(now.getHours()) + ':' + pad(now.getMinutes());
+  const target = state.settings.reminderTime || '22:00';
+  if (hhmm !== target) return;
+
+  const today = todayStr();
+  const last = localStorage.getItem(REMIND_KEY);
+  if (last === today) return;
+  localStorage.setItem(REMIND_KEY, today);
+
+  const hasEntry = state.entries.some(e => e.date === today);
+  const hasLog = state.logs[today] && state.logs[today].trim();
+
+  let title = '人生时间仪表盘提醒';
+  let body = '';
+  if (!hasEntry && !hasLog) body = '今天的时间记录和日志都还没写，花 2 分钟记一下吧。';
+  else if (!hasEntry) body = '今天还没记录时间，现在记一下吧。';
+  else if (!hasLog) body = '今天还没写日志，花几分钟写几句吧。';
+  else return;
+
+  sendNotification(title, body);
+}
+function sendNotification(title, body) {
+  if (!('Notification' in window)) {
+    toast(title + '：' + body);
+    return;
+  }
+  if (Notification.permission === 'granted') {
+    try {
+      new Notification(title, {
+        body,
+        icon: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'%3E%3Crect width='192' height='192' rx='36' fill='%235b5bd6'/%3E%3Ctext x='96' y='132' font-size='110' text-anchor='middle' fill='white'%3E%E2%8F%B3%3C/text%3E%3C/svg%3E"
+      });
+    } catch (e) { toast(title + '：' + body); }
+  } else {
+    toast(title + '：' + body);
+  }
+}
+
+/* ==================== PWA 注册 ==================== */
+function registerSW() {
+  if (!('serviceWorker' in navigator)) return;
+  if (location.protocol !== 'https:' && location.hostname !== 'localhost') return;
+  navigator.serviceWorker.register('sw.js').then(() => {
+    console.log('📱 Service Worker 已注册');
+  }).catch(e => {
+    console.warn('Service Worker 注册失败（不影响使用）', e);
+  });
+}
+
 /* ==================== 初始化 ==================== */
 function init() {
   state = loadState();
@@ -1357,9 +1615,7 @@ function init() {
   $('#authBtn').onclick = () => {
     if (currentUser) {
       if (!confirm('确定退出登录？')) return;
-      sbClient.auth.signOut().then(() => {
-        toast('已退出');
-      });
+      sbClient.auth.signOut().then(() => toast('已退出'));
     } else {
       openAuthModal();
     }
@@ -1382,6 +1638,8 @@ function init() {
   }
 
   render();
+  startReminderLoop();
+  registerSW();
 }
 
 init();

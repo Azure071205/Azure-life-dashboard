@@ -72,16 +72,11 @@ body::before{
 }
 .tab:hover{background:var(--accent-soft)}
 .tab.active{background:var(--accent);color:#fff;font-weight:500}
-.menu-divider{
-  height:1px;background:var(--border);margin:5px 4px;
-}
-.menu-auth{
-  display:flex;flex-direction:column;gap:6px;padding:4px;
-}
+.menu-divider{height:1px;background:var(--border);margin:5px 4px}
+.menu-auth{display:flex;flex-direction:column;gap:6px;padding:4px}
 .auth-status{
   font-size:11px;color:var(--dim);
-  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
-  padding:2px 4px;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding:2px 4px;
 }
 .menu-auth .btn{width:100%;text-align:center;padding:7px 12px;font-size:12.5px}
 main{max-width:1180px;margin:0 auto;padding:16px 14px 60px}
@@ -140,7 +135,7 @@ textarea{width:100%;resize:vertical;min-height:90px;line-height:1.6}
   display:flex;align-items:center;gap:12px;background:rgb(var(--card-rgb) / var(--card-alpha));border:1px solid var(--border);
   border-radius:11px;padding:11px 14px;margin-bottom:8px;
 }
-.entry-time{font-size:12px;color:var(--dim);min-width:88px;font-variant-numeric:tabular-nums}
+.entry-time{font-size:12px;color:var(--dim);min-width:110px;font-variant-numeric:tabular-nums}
 .entry-name{font-weight:600;font-size:14px;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .entry-note{font-size:12px;color:var(--dim);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .entry-dur{font-size:13px;font-weight:600;font-variant-numeric:tabular-nums}
@@ -181,8 +176,8 @@ textarea{width:100%;resize:vertical;min-height:90px;line-height:1.6}
 }
 .color-swatches{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:6px}
 .swatch{
-  width:32px;height:32px;border-radius:8px;cursor:pointer;
-  transition:.15s;box-shadow:0 1px 3px rgba(0,0,0,.08);
+  width:32px;height:32px;border-radius:8px;cursor:pointer;transition:.15s;
+  box-shadow:0 1px 3px rgba(0,0,0,.08);
 }
 .swatch:hover{transform:scale(1.08)}
 .swatch:active{transform:scale(.94)}
@@ -192,8 +187,7 @@ textarea{width:100%;resize:vertical;min-height:90px;line-height:1.6}
   padding:9px 16px;
   background:rgb(var(--panel-rgb) / 0.96);
   border-top:1px solid var(--border);
-  backdrop-filter:blur(12px);
-  -webkit-backdrop-filter:blur(12px);
+  backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);
 }
 .mini-info{flex:1;min-width:0;display:flex;align-items:center;gap:8px}
 .mini-icon{font-size:14px;flex:0 0 auto}
@@ -202,8 +196,7 @@ textarea{width:100%;resize:vertical;min-height:90px;line-height:1.6}
 .mini-btn{
   width:34px;height:34px;border-radius:50%;
   border:none;background:var(--accent);color:#fff;font-size:14px;
-  cursor:pointer;display:flex;align-items:center;justify-content:center;
-  padding:0;flex:0 0 auto;
+  cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0;flex:0 0 auto;
 }
 .mini-btn:hover{opacity:.88}
 .mini-btn.ghost{background:transparent;color:var(--text);border:1px solid var(--border)}
@@ -213,6 +206,17 @@ textarea{width:100%;resize:vertical;min-height:90px;line-height:1.6}
   font-size:12px;line-height:1.7;color:var(--text);
 }
 .tip-box b{color:var(--accent)}
+.sched-entry{
+  display:flex;align-items:center;gap:10px;
+  background:rgb(var(--card-rgb) / var(--card-alpha));
+  border:1px solid var(--border);border-radius:10px;
+  padding:10px 12px;margin-bottom:8px;
+}
+.sched-time{font-size:13px;font-variant-numeric:tabular-nums;color:var(--dim);min-width:110px}
+.sched-bar{flex:1;height:6px;border-radius:99px;background:var(--accent-soft);overflow:hidden;min-width:60px}
+.sched-bar > div{height:100%;border-radius:99px}
+.sched-name{font-weight:600;font-size:13px;min-width:80px}
+.sched-dur{font-size:12px;color:var(--dim);font-variant-numeric:tabular-nums}
 </style>
 </head>
 <body>
@@ -298,6 +302,13 @@ function fmtDuration(min) {
   if (h) return `${h}小时`;
   return `${m}分钟`;
 }
+function calcDuration(start, end) {
+  if (!start || !end) return 0;
+  const [sh, sm] = start.split(':').map(Number);
+  const [eh, em] = end.split(':').map(Number);
+  const diff = (eh * 60 + em) - (sh * 60 + sm);
+  return diff > 0 ? diff : 0;
+}
 function toast(msg) {
   const t = $('#toast');
   t.textContent = msg;
@@ -340,6 +351,7 @@ function defaultState() {
       { id: 'm_other',   name: '未分类',    color: '#9ca3af', type: 'record', weekly: 0,    parentId: null, order: 12, archived: false }
     ],
     dayPlans: {},
+    daySchedules: {},
     logs: {},
     entries: [],
     songs: []
@@ -360,6 +372,7 @@ function loadState() {
       }, s.settings || {});
       s.modules = s.modules || [];
       s.dayPlans = s.dayPlans || {};
+      s.daySchedules = s.daySchedules || {};
       s.logs = s.logs || {};
       s.entries = s.entries || [];
       s.songs = s.songs || [];
@@ -398,7 +411,6 @@ function openAudioDB() {
     req.onerror = () => reject(req.error);
   });
 }
-
 async function putAudioBlob(key, blob) {
   const db = await openAudioDB();
   return new Promise((resolve, reject) => {
@@ -408,7 +420,6 @@ async function putAudioBlob(key, blob) {
     tx.onerror = () => reject(tx.error);
   });
 }
-
 async function getAudioBlob(key) {
   const db = await openAudioDB();
   return new Promise((resolve, reject) => {
@@ -418,7 +429,6 @@ async function getAudioBlob(key) {
     req.onerror = () => reject(req.error);
   });
 }
-
 async function deleteAudioBlob(key) {
   const db = await openAudioDB();
   return new Promise((resolve, reject) => {
@@ -433,17 +443,13 @@ function getTodaySong() {
   if (!state.songs || !state.songs.length) return null;
   const today = todayStr();
   let hash = 0;
-  for (let i = 0; i < today.length; i++) {
-    hash = ((hash << 5) - hash + today.charCodeAt(i)) | 0;
-  }
+  for (let i = 0; i < today.length; i++) hash = ((hash << 5) - hash + today.charCodeAt(i)) | 0;
   return state.songs[Math.abs(hash) % state.songs.length];
 }
-
 function getRandomSong() {
   if (!state.songs || !state.songs.length) return null;
   return state.songs[Math.floor(Math.random() * state.songs.length)];
 }
-
 async function loadSongSrc(song) {
   if (!song) return null;
   if (song.type === 'url') return song.url;
@@ -456,12 +462,11 @@ async function loadSongSrc(song) {
   }
   return null;
 }
-
 async function playSong(song) {
   if (!song || !audioEl) return;
   try {
     const src = await loadSongSrc(song);
-    if (!src) { toast('无法加载音频，可能已被清理'); return; }
+    if (!src) { toast('无法加载音频'); return; }
     audioEl.src = src;
     await audioEl.play();
     currentSongId = song.id;
@@ -471,7 +476,6 @@ async function playSong(song) {
     toast('播放失败（浏览器可能拦截了自动播放）');
   }
 }
-
 function togglePlay() {
   if (!audioEl) return;
   if (!state.songs.length) { toast('歌单为空'); return; }
@@ -480,14 +484,9 @@ function togglePlay() {
     if (song) playSong(song);
     return;
   }
-  if (audioEl.paused) {
-    audioEl.play().then(updateMiniPlayer).catch(() => toast('播放失败'));
-  } else {
-    audioEl.pause();
-    updateMiniPlayer();
-  }
+  if (audioEl.paused) audioEl.play().then(updateMiniPlayer).catch(() => toast('播放失败'));
+  else { audioEl.pause(); updateMiniPlayer(); }
 }
-
 function updateMiniPlayer() {
   const mp = $('#miniPlayer');
   if (!mp) return;
@@ -498,13 +497,9 @@ function updateMiniPlayer() {
   }
   mp.style.display = 'flex';
   document.body.classList.add('has-player');
-
   let displaySong = null;
-  if (currentSongId) {
-    displaySong = state.songs.find(s => s.id === currentSongId) || getTodaySong();
-  } else {
-    displaySong = getTodaySong();
-  }
+  if (currentSongId) displaySong = state.songs.find(s => s.id === currentSongId) || getTodaySong();
+  else displaySong = getTodaySong();
   $('#miniTitle').textContent = displaySong ? displaySong.title : '—';
   const btn = $('#miniPlay');
   if (audioEl && !audioEl.paused) btn.textContent = '⏸';
@@ -514,20 +509,13 @@ function updateMiniPlayer() {
 /* ==================== 外观应用 ==================== */
 function applyAppearance() {
   const s = state.settings;
-
   if (s.accentColor) document.documentElement.style.setProperty('--accent', s.accentColor);
   else document.documentElement.style.removeProperty('--accent');
-
   if (s.textColor) document.documentElement.style.setProperty('--text', s.textColor);
   else document.documentElement.style.removeProperty('--text');
-
   const body = document.body;
-  if (s.bgImage) {
-    body.style.backgroundImage = `url(${s.bgImage})`;
-  } else {
-    body.style.backgroundImage = '';
-  }
-
+  if (s.bgImage) body.style.backgroundImage = `url(${s.bgImage})`;
+  else body.style.backgroundImage = '';
   document.documentElement.style.setProperty('--overlay-alpha', (s.bgOverlay || 0) / 100);
   document.documentElement.style.setProperty('--card-alpha', (s.cardAlpha || 100) / 100);
   document.documentElement.dataset.theme = s.theme || 'light';
@@ -744,9 +732,24 @@ function getDefaultDaily(m) {
   return Math.round((m.weekly || 0) / 7);
 }
 
+function getDaySchedules(dateStr) {
+  return (state.daySchedules[dateStr] || []).slice().sort((a, b) => (a.start || '').localeCompare(b.start || ''));
+}
+
+function getScheduleTotalForModule(dateStr, moduleId) {
+  const list = state.daySchedules[dateStr] || [];
+  return list.filter(s => s.moduleId === moduleId)
+    .reduce((sum, s) => sum + calcDuration(s.start, s.end), 0);
+}
+
 function getDayTarget(dateStr, moduleId) {
-  const custom = (state.dayPlans[dateStr] || {})[moduleId];
-  if (custom != null) return custom;
+  // 1. 手动填的值优先
+  const manual = (state.dayPlans[dateStr] || {})[moduleId];
+  if (manual != null) return manual;
+  // 2. 有该模块的时间段 → 累加
+  const schedTotal = getScheduleTotalForModule(dateStr, moduleId);
+  if (schedTotal > 0) return schedTotal;
+  // 3. 用默认每日目标
   const m = state.modules.find(x => x.id === moduleId);
   if (!m) return null;
   return getDefaultDaily(m);
@@ -1032,9 +1035,7 @@ function renderLog(app) {
   `;
 
   const list = $('#entryList');
-  if (!dayEntries.length) {
-    list.innerHTML = '<div class="empty">这一天还没有记录</div>';
-  }
+  if (!dayEntries.length) list.innerHTML = '<div class="empty">这一天还没有记录</div>';
   dayEntries.forEach(e => {
     const m = modMap[e.moduleId];
     const el = document.createElement('div');
@@ -1108,9 +1109,7 @@ function renderLog(app) {
     const moduleId = $('#tbModule').value;
     const s = $('#tbStart').value, e2 = $('#tbEnd').value;
     if (!moduleId || !s || !e2) { toast('请填写完整'); return; }
-    const [sh, sm] = s.split(':').map(Number);
-    const [eh, em] = e2.split(':').map(Number);
-    let duration = (eh * 60 + em) - (sh * 60 + sm);
+    const duration = calcDuration(s, e2);
     if (duration <= 0) { toast('结束时间要晚于开始时间'); return; }
     state.entries.push({
       id: uid('e'), date: viewDate, start: s, end: e2,
@@ -1185,6 +1184,11 @@ function renderPlan(app) {
   const weekTotals = getWeekTargets(ws);
   const typeLabel = { fixed: '固定', manual: '手动目标', record: '仅记录' };
 
+  const schedules = getDaySchedules(day);
+  const schedTotal = schedules.reduce((s, x) => s + calcDuration(x.start, x.end), 0);
+
+  const modOptions = mods.map(m => `<option value="${m.id}">${esc(m.name)}</option>`).join('');
+
   app.innerHTML = `
     <div class="section-head">
       <h2>计划</h2>
@@ -1198,7 +1202,7 @@ function renderPlan(app) {
     </div>
 
     <div class="muted" style="margin-bottom:12px">
-      正在编辑：<b>${day}（${WEEK_NAMES[dObj.getDay()]}）</b>。这里改的是「这一天」的目标，下面周汇总会自动更新。
+      正在编辑：<b>${day}（${WEEK_NAMES[dObj.getDay()]}）</b>
     </div>
 
     <div class="stats" style="margin-bottom:16px">
@@ -1209,8 +1213,27 @@ function renderPlan(app) {
         <div class="stat-value" style="color:${dayRest >= 0 ? 'var(--green)' : 'var(--red)'}">${fmtHours(Math.abs(dayRest))}</div></div>
     </div>
 
+    <!-- 时间段 -->
+    <div class="section-head">
+      <h3>时间段安排</h3>
+      <div class="muted">共 ${fmtHours(schedTotal)} · 自动汇总到模块目标</div>
+    </div>
     <div class="card" style="margin-bottom:20px">
-      <div class="card-title">「${day}」日计划（小时）</div>
+      <div id="schedList"></div>
+      <div class="row" style="margin-top:10px">
+        <select id="schedModule" style="min-width:140px">${modOptions}</select>
+        <input type="time" id="schedStart" value="09:00">
+        <span class="muted">到</span>
+        <input type="time" id="schedEnd" value="10:00">
+        <button class="btn primary" id="schedAddBtn">+ 添加时间段</button>
+      </div>
+    </div>
+
+    <!-- 按模块汇总 -->
+    <div class="section-head"><h3>日计划（按模块汇总）</h3>
+      <div class="muted">填数字可覆盖自动汇总</div>
+    </div>
+    <div class="card" style="margin-bottom:20px">
       <table>
         <thead><tr><th>模块</th><th>类型</th><th style="width:150px">当天目标</th></tr></thead>
         <tbody id="dayBody"></tbody>
@@ -1228,16 +1251,75 @@ function renderPlan(app) {
     </div>
   `;
 
+  /* ---- 时间段列表 ---- */
+  const schedList = $('#schedList');
+  if (!schedules.length) {
+    schedList.innerHTML = '<div class="empty" style="padding:12px 0">还没有时间段，下面添加一个</div>';
+  } else {
+    const maxDur = Math.max(...schedules.map(s => calcDuration(s.start, s.end)), 1);
+    schedules.forEach(s => {
+      const m = mods.find(x => x.id === s.moduleId) || { name: '已删除模块', color: '#9ca3af' };
+      const dur = calcDuration(s.start, s.end);
+      const pct = Math.round(dur / maxDur * 100);
+      const row = document.createElement('div');
+      row.className = 'sched-entry';
+      row.innerHTML = `
+        <span class="sched-time">${s.start} - ${s.end}</span>
+        <span class="dot" style="background:${m.color}"></span>
+        <span class="sched-name">${esc(m.name)}</span>
+        <div class="sched-bar"><div style="width:${pct}%;background:${m.color}"></div></div>
+        <span class="sched-dur">${fmtDuration(dur)}</span>
+        <button class="icon-btn" data-sched-del="${s.id}" title="删除">✕</button>
+      `;
+      schedList.appendChild(row);
+    });
+  }
+
+  schedList.addEventListener('click', ev => {
+    const btn = ev.target.closest('[data-sched-del]');
+    if (!btn) return;
+    const id = btn.dataset.schedDel;
+    if (!confirm('删除这个时间段？')) return;
+    state.daySchedules[day] = (state.daySchedules[day] || []).filter(x => x.id !== id);
+    save();
+    render();
+  });
+
+  $('#schedAddBtn').onclick = () => {
+    const moduleId = $('#schedModule').value;
+    const start = $('#schedStart').value;
+    const end = $('#schedEnd').value;
+    if (!moduleId || !start || !end) { toast('请填写完整'); return; }
+    const dur = calcDuration(start, end);
+    if (dur <= 0) { toast('结束时间要晚于开始时间'); return; }
+    if (!state.daySchedules[day]) state.daySchedules[day] = [];
+    state.daySchedules[day].push({
+      id: uid('sched'),
+      moduleId, start, end
+    });
+    save();
+    toast('已添加');
+    render();
+  };
+
+  /* ---- 日计划表 ---- */
   const dayBody = $('#dayBody');
   mods.forEach(m => {
     const tr = document.createElement('tr');
     const editable = m.type !== 'record';
     const val = dayTargets[m.id];
+    const schedMin = getScheduleTotalForModule(day, m.id);
+    const manual = (state.dayPlans[day] || {})[m.id];
+    let hint = '';
+    if (manual != null) hint = '<div class="muted" style="font-size:11px;margin-top:2px">手动值</div>';
+    else if (schedMin > 0) hint = `<div class="muted" style="font-size:11px;margin-top:2px">来自时间段 ${fmtHours(schedMin)}</div>`;
+    else hint = '<div class="muted" style="font-size:11px;margin-top:2px">默认</div>';
+
     tr.innerHTML = `
       <td><span class="dot" style="display:inline-block;background:${m.color};margin-right:7px"></span>${esc(m.name)}</td>
       <td><span class="tag">${typeLabel[m.type] || m.type}</span></td>
       <td>${editable
-        ? `<input type="number" step="0.25" min="0" style="width:100px" value="${val != null ? (val / 60) : 0}" data-mid="${m.id}">`
+        ? `<input type="number" step="0.25" min="0" style="width:100px" value="${val != null ? (val / 60) : 0}" data-mid="${m.id}" placeholder="自动">${hint}`
         : '<span class="muted">—</span>'}</td>
     `;
     dayBody.appendChild(tr);
@@ -1247,15 +1329,20 @@ function renderPlan(app) {
     const inp = ev.target.closest('[data-mid]');
     if (!inp) return;
     const mid = inp.dataset.mid;
-    const hours = parseFloat(inp.value) || 0;
-    const minutes = Math.round(hours * 60);
+    const hours = parseFloat(inp.value);
     if (!state.dayPlans[day]) state.dayPlans[day] = {};
-    state.dayPlans[day][mid] = minutes;
+    if (isNaN(hours)) {
+      // 清空 → 恢复自动
+      delete state.dayPlans[day][mid];
+    } else {
+      state.dayPlans[day][mid] = Math.round(hours * 60);
+    }
     save();
     toast('已更新');
     render();
   });
 
+  /* ---- 本周汇总 ---- */
   const weekBody = $('#weekBody');
   mods.forEach(m => {
     const tr = document.createElement('tr');
@@ -1410,12 +1497,11 @@ function openModuleModal(id) {
 /* ==================== 音乐页 ==================== */
 async function handleSongUpload(files) {
   let added = 0, failed = 0;
-  const failNames = [];
   for (const file of files) {
     const okExt = /\.(mp3|m4a|flac|wav|ogg|aac)$/i.test(file.name);
     const okType = file.type.startsWith('audio/');
-    if (!okType && !okExt) { failed++; failNames.push(file.name); continue; }
-    if (file.size > 30 * 1024 * 1024) { failed++; failNames.push(file.name); continue; }
+    if (!okType && !okExt) { failed++; continue; }
+    if (file.size > 30 * 1024 * 1024) { failed++; continue; }
     try {
       const key = 'audio_' + Date.now() + '_' + Math.random().toString(36).slice(2, 7);
       await putAudioBlob(key, file);
@@ -1431,13 +1517,12 @@ async function handleSongUpload(files) {
     } catch (err) {
       console.error(err);
       failed++;
-      failNames.push(file.name);
     }
   }
   if (added) save();
   if (added && !failed) toast('已添加 ' + added + ' 首');
   else if (added && failed) toast('已添加 ' + added + ' 首，' + failed + ' 首失败');
-  else toast('没有添加成功，请检查格式或大小');
+  else toast('没有添加成功');
   render();
 }
 
@@ -1469,7 +1554,7 @@ function renderMusic(app) {
         · 手机弹出菜单时选「浏览 / 文件 / 选取文件」，不要选「语音备忘录」<br>
         · 支持 mp3 / m4a / flac / wav / ogg，单个 ≤ 30MB<br>
         · 不支持网易云 .ncm 加密格式<br>
-        · <b>可以一次选多个文件</b>批量添加
+        · 可以一次选多个文件批量添加
       </div>
       <div class="field">
         <label>上传本地音频（支持多选）</label>
@@ -1484,9 +1569,7 @@ function renderMusic(app) {
   `;
 
   const list = $('#songList');
-  if (!songs.length) {
-    list.innerHTML = '<div class="empty">歌单为空</div>';
-  }
+  if (!songs.length) list.innerHTML = '<div class="empty">歌单为空</div>';
   songs.forEach(s => {
     const el = document.createElement('div');
     el.className = 'entry';
@@ -1500,21 +1583,12 @@ function renderMusic(app) {
     list.appendChild(el);
   });
 
-  if (today) {
-    $('#playTodayBtn').onclick = () => playSong(today);
-  }
+  if (today) $('#playTodayBtn').onclick = () => playSong(today);
   const randomBtn = $('#randomBtn');
-  if (randomBtn) randomBtn.onclick = () => {
-    const s = getRandomSong();
-    if (s) playSong(s);
-  };
+  if (randomBtn) randomBtn.onclick = () => { const s = getRandomSong(); if (s) playSong(s); };
   const randomAll = $('#playRandomAll');
-  if (randomAll) randomAll.onclick = () => {
-    const s = getRandomSong();
-    if (s) playSong(s);
-  };
+  if (randomAll) randomAll.onclick = () => { const s = getRandomSong(); if (s) playSong(s); };
 
-  /* 上传本地音频（多选） */
   $('#songFileBtn').onclick = () => {
     try {
       const inp = document.createElement('input');
@@ -1531,10 +1605,7 @@ function renderMusic(app) {
         await handleSongUpload([...files]);
       };
       inp.click();
-    } catch (e) {
-      console.error(e);
-      toast('打开文件选择器失败');
-    }
+    } catch (e) { toast('打开文件选择器失败'); }
   };
 
   list.addEventListener('click', async ev => {
@@ -1553,10 +1624,7 @@ function renderMusic(app) {
         try { await deleteAudioBlob(s.blobKey); } catch (e) { console.warn(e); }
       }
       if (currentSongId === id) {
-        if (audioEl) {
-          audioEl.pause();
-          audioEl.src = '';
-        }
+        if (audioEl) { audioEl.pause(); audioEl.src = ''; }
         currentSongId = null;
       }
       state.songs = state.songs.filter(x => x.id !== id);
@@ -1798,7 +1866,6 @@ function renderSettings(app) {
           <button class="btn primary" id="bgUploadBtn">上传图片</button>
           <button class="btn" id="bgClearBtn">清除背景</button>
         </div>
-        <div class="muted" style="margin-top:6px">建议用横向大图。图片会压缩后只存在本设备，不会同步到云端。</div>
       </div>
 
       <div class="field">
@@ -1905,18 +1972,13 @@ function renderSettings(app) {
       applyAppearance();
       toast('背景已设置');
       render();
-    } catch (err) {
-      toast('处理失败：' + err.message);
-    }
+    } catch (err) { toast('处理失败：' + err.message); }
   };
   $('#bgClearBtn').onclick = () => {
     if (!state.settings.bgImage) { toast('还没有背景图'); return; }
     if (!confirm('确定清除背景图？')) return;
     state.settings.bgImage = '';
-    save();
-    applyAppearance();
-    toast('已清除');
-    render();
+    save(); applyAppearance(); toast('已清除'); render();
   };
 
   $('#bgOverlay').oninput = e => {
@@ -1988,7 +2050,6 @@ function renderSettings(app) {
     toast('已切换');
     if (currentView === 'dashboard') render();
   };
-
   $('#setWeekStart').onchange = e => { state.settings.weekStart = Number(e.target.value); save(); toast('已保存'); };
   $('#setUnit').onchange = e => { state.settings.minUnit = Number(e.target.value); save(); toast('已保存'); };
 
@@ -2028,8 +2089,7 @@ function renderSettings(app) {
 
   $('#exportCsv').onclick = () => {
     const headers = ['日期', '开始', '结束', '时长（分钟）', '模块', '备注'];
-    const rows = state.entries
-      .slice()
+    const rows = state.entries.slice()
       .sort((a, b) => a.date.localeCompare(b.date) || (a.start || '').localeCompare(b.start || ''))
       .map(e => {
         const m = state.modules.find(x => x.id === e.moduleId);
@@ -2037,9 +2097,7 @@ function renderSettings(app) {
       });
     const csv = [headers, ...rows].map(row => row.map(cell => {
       const s = String(cell);
-      if (s.includes(',') || s.includes('"') || s.includes('\n')) {
-        return '"' + s.replace(/"/g, '""') + '"';
-      }
+      if (s.includes(',') || s.includes('"') || s.includes('\n')) return '"' + s.replace(/"/g, '""') + '"';
       return s;
     }).join(',')).join('\n');
     download(`life-dashboard-entries-${todayStr()}.csv`, '\ufeff' + csv, 'text/csv;charset=utf-8');
@@ -2063,6 +2121,7 @@ function renderSettings(app) {
           accentColor: '', textColor: ''
         }, state.settings || {});
         state.dayPlans = state.dayPlans || {};
+        state.daySchedules = state.daySchedules || {};
         state.logs = state.logs || {};
         state.songs = state.songs || [];
         save();
@@ -2070,9 +2129,7 @@ function renderSettings(app) {
         reviewWeek = getWeekStart(todayStr());
         toast('导入成功');
         render();
-      } catch (err) {
-        toast('导入失败：' + err.message);
-      }
+      } catch (err) { toast('导入失败：' + err.message); }
     };
     reader.readAsText(file);
   };

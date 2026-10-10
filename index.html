@@ -15,22 +15,35 @@
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 :root{
-  --bg:#f4f5f9;--card:#fff;--text:#16181f;--dim:#6b7280;--border:#e6e8ee;
+  --bg:#f4f5f9;--text:#16181f;--dim:#6b7280;--border:#e6e8ee;
   --accent:#5b5bd6;--accent-soft:#eef0fe;--green:#10b981;--red:#ef4444;--orange:#f59e0b;
   --radius:14px;
+  --card-rgb:255 255 255;--card-alpha:1;
+  --panel-rgb:255 255 255;
 }
 html[data-theme="dark"]{
-  --bg:#0e1016;--card:#181b24;--text:#e8eaf0;--dim:#8b92a4;--border:#262b38;
+  --bg:#0e1016;--text:#e8eaf0;--dim:#8b92a4;--border:#262b38;
   --accent:#7c7cf0;--accent-soft:#23263a;
+  --card-rgb:24 27 36;--card-alpha:1;
+  --panel-rgb:24 27 36;
 }
+html,body{min-height:100%}
 body{
-  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
-  background:var(--bg);color:var(--text);min-height:100vh;-webkit-font-smoothing:antialiased;
-  transition:background .2s,color .2s;
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Hiragino Sans GB","Microsoft YaHei","Helvetica Neue",Arial,sans-serif;
+  background-color:var(--bg);color:var(--text);min-height:100vh;-webkit-font-smoothing:antialiased;
+  background-size:cover;background-position:center;background-attachment:fixed;background-repeat:no-repeat;
+  transition:background-color .2s,color .2s;
 }
+body::before{
+  content:'';position:fixed;inset:0;pointer-events:none;z-index:0;
+  background:rgba(0,0,0,var(--overlay-alpha,0));
+}
+.topbar,main,.toast,.modal-mask{position:relative;z-index:1}
 .topbar{
-  display:flex;align-items:center;gap:16px;padding:14px 22px;background:var(--card);
+  display:flex;align-items:center;gap:16px;padding:14px 22px;
+  background:rgb(var(--panel-rgb) / var(--card-alpha));
   border-bottom:1px solid var(--border);position:sticky;top:0;z-index:50;flex-wrap:wrap;
+  backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);
 }
 .brand{font-weight:700;font-size:16px;white-space:nowrap}
 .tabs{display:flex;gap:4px;flex-wrap:wrap}
@@ -48,12 +61,12 @@ main{max-width:1180px;margin:0 auto;padding:22px 18px 60px}
 .section-head h3{font-size:15px}
 .muted{color:var(--dim);font-size:13px}
 .stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px}
-.stat{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:14px 16px}
+.stat{background:rgb(var(--card-rgb) / var(--card-alpha));border:1px solid var(--border);border-radius:var(--radius);padding:14px 16px}
 .stat-label{font-size:12px;color:var(--dim);margin-bottom:6px}
 .stat-value{font-size:22px;font-weight:700;letter-spacing:-.5px}
 .stat-sub{font-size:12px;color:var(--dim);margin-top:4px}
 .mod-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(215px,1fr));gap:12px}
-.mod-card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:13px 15px}
+.mod-card{background:rgb(var(--card-rgb) / var(--card-alpha));border:1px solid var(--border);border-radius:var(--radius);padding:13px 15px}
 .mod-head{display:flex;align-items:center;gap:8px;margin-bottom:9px}
 .dot{width:10px;height:10px;border-radius:50%;flex:0 0 auto}
 .mod-name{font-weight:600;font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
@@ -66,7 +79,7 @@ main{max-width:1180px;margin:0 auto;padding:22px 18px 60px}
 .bad{color:var(--red);font-weight:600}
 .charts{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:14px}
 @media(max-width:760px){.charts{grid-template-columns:1fr}}
-.card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:16px}
+.card{background:rgb(var(--card-rgb) / var(--card-alpha));border:1px solid var(--border);border-radius:var(--radius);padding:16px}
 .card-title{font-size:13px;font-weight:600;margin-bottom:12px;color:var(--dim)}
 canvas{max-height:280px}
 table{width:100%;border-collapse:collapse;font-size:13px}
@@ -75,14 +88,15 @@ th{color:var(--dim);font-weight:500;font-size:12px}
 tr:last-child td{border-bottom:none}
 input,select,textarea{
   font-family:inherit;font-size:14px;padding:8px 11px;border-radius:9px;border:1px solid var(--border);
-  background:var(--card);color:var(--text);outline:none;transition:.15s;
+  background:rgb(var(--card-rgb) / var(--card-alpha));color:var(--text);outline:none;transition:.15s;
 }
 input:focus,select:focus,textarea:focus{border-color:var(--accent)}
 input[type=color]{padding:2px;height:36px;width:46px;cursor:pointer}
+input[type=range]{padding:0;height:28px;accent-color:var(--accent)}
 textarea{width:100%;resize:vertical;min-height:90px;line-height:1.6}
 .btn{
   font-family:inherit;font-size:13px;padding:8px 15px;border-radius:9px;border:1px solid var(--border);
-  background:var(--card);color:var(--text);cursor:pointer;transition:.15s;
+  background:rgb(var(--card-rgb) / var(--card-alpha));color:var(--text);cursor:pointer;transition:.15s;
 }
 .btn:hover{border-color:var(--accent);color:var(--accent)}
 .btn.primary{background:var(--accent);color:#fff;border-color:var(--accent)}
@@ -91,9 +105,9 @@ textarea{width:100%;resize:vertical;min-height:90px;line-height:1.6}
 .btn.danger:hover{border-color:var(--red)}
 .btn.sm{padding:5px 10px;font-size:12px}
 .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
-.form-card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:16px;margin-bottom:16px}
+.form-card{background:rgb(var(--card-rgb) / var(--card-alpha));border:1px solid var(--border);border-radius:var(--radius);padding:16px;margin-bottom:16px}
 .entry{
-  display:flex;align-items:center;gap:12px;background:var(--card);border:1px solid var(--border);
+  display:flex;align-items:center;gap:12px;background:rgb(var(--card-rgb) / var(--card-alpha));border:1px solid var(--border);
   border-radius:11px;padding:11px 14px;margin-bottom:8px;
 }
 .entry-time{font-size:12px;color:var(--dim);min-width:88px;font-variant-numeric:tabular-nums}
@@ -109,13 +123,14 @@ textarea{width:100%;resize:vertical;min-height:90px;line-height:1.6}
   z-index:100;padding:18px;
 }
 .modal{
-  background:var(--card);border-radius:16px;padding:22px;width:100%;max-width:420px;
+  background:rgb(var(--panel-rgb) / 1);border-radius:16px;padding:22px;width:100%;max-width:420px;
   border:1px solid var(--border);max-height:88vh;overflow:auto;
 }
 .modal h3{font-size:16px;margin-bottom:16px}
 .field{margin-bottom:13px}
 .field label{display:block;font-size:12px;color:var(--dim);margin-bottom:5px}
 .field input,.field select{width:100%}
+.field .row{margin-top:6px}
 .modal-actions{display:flex;justify-content:flex-end;gap:9px;margin-top:18px}
 .timer-display{font-size:24px;font-weight:700;font-variant-numeric:tabular-nums;min-width:100px}
 .tag{font-size:11px;padding:2px 8px;border-radius:99px;background:var(--accent-soft);color:var(--dim)}
@@ -124,12 +139,16 @@ textarea{width:100%;resize:vertical;min-height:90px;line-height:1.6}
   padding:10px 20px;border-radius:99px;font-size:13px;z-index:200;opacity:0;transition:.3s;pointer-events:none;
 }
 .toast.show{opacity:1}
-/* 热力图 */
 .heat-wrap{display:grid;grid-auto-flow:column;grid-template-rows:repeat(7,14px);gap:3px;overflow-x:auto;padding:4px 0}
 .heat-cell{width:14px;height:14px;border-radius:3px;background:var(--accent-soft);cursor:pointer;transition:.15s}
 .heat-cell:hover{transform:scale(1.2)}
 .heat-legend{display:flex;gap:6px;align-items:center;margin-top:10px;font-size:11px;color:var(--dim)}
 .heat-legend .heat-cell{width:12px;height:12px}
+.bg-preview{
+  width:100%;height:140px;border-radius:10px;border:1px dashed var(--border);
+  background-size:cover;background-position:center;display:flex;align-items:center;justify-content:center;
+  color:var(--dim);font-size:13px;margin-bottom:10px;
+}
 </style>
 </head>
 <body>
@@ -211,13 +230,12 @@ function download(filename, content, type) {
 
 /* ==================== 状态与持久化 ==================== */
 const STORE_KEY = 'life_dashboard_v1';
-const REMIND_KEY = 'life_dashboard_last_reminder';
 
 function defaultState() {
   return {
     settings: {
       weekStart: 1, minUnit: 15, theme: 'light',
-      reminderEnabled: false, reminderTime: '22:00'
+      bgImage: '', bgOverlay: 0, cardAlpha: 100, bgBlur: 0
     },
     modules: [
       { id: 'm_sleep',   name: '睡眠',      color: '#7c5cff', type: 'fixed',  weekly: 3150, parentId: null, order: 0,  archived: false },
@@ -249,7 +267,7 @@ function loadState() {
       const s = JSON.parse(raw);
       s.settings = Object.assign({
         weekStart: 1, minUnit: 15, theme: 'light',
-        reminderEnabled: false, reminderTime: '22:00'
+        bgImage: '', bgOverlay: 0, cardAlpha: 100, bgBlur: 0
       }, s.settings || {});
       s.modules = s.modules || [];
       s.dayPlans = s.dayPlans || {};
@@ -268,6 +286,60 @@ function save() {
     clearTimeout(syncTimeout);
     syncTimeout = setTimeout(() => { syncToCloud(); }, 2000);
   }
+}
+
+/* ==================== 外观应用 ==================== */
+function applyAppearance() {
+  const s = state.settings;
+  const body = document.body;
+
+  // 背景图（只存本地，不同步云端）
+  if (s.bgImage) {
+    body.style.backgroundImage = `url(${s.bgImage})`;
+    body.style.backgroundColor = '';
+  } else {
+    body.style.backgroundImage = '';
+    body.style.backgroundColor = '';
+  }
+
+  // 遮罩暗度
+  document.documentElement.style.setProperty('--overlay-alpha', (s.bgOverlay || 0) / 100);
+
+  // 卡片透明度
+  document.documentElement.style.setProperty('--card-alpha', (s.cardAlpha || 100) / 100);
+
+  // 背景模糊
+  if (s.bgBlur && s.bgImage) {
+    body.style.filter = '';
+    // 用伪元素实现模糊比较麻烦，这里简化：不模糊页面本身，用遮罩模拟
+  }
+
+  // 主题
+  document.documentElement.dataset.theme = s.theme || 'light';
+}
+
+/* 图片压缩到 base64 */
+function compressImage(file, maxWidth = 1920, quality = 0.82) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = e => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        let w = img.width, h = img.height;
+        if (w > maxWidth) { h = Math.round(h * maxWidth / w); w = maxWidth; }
+        canvas.width = w;
+        canvas.height = h;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, w, h);
+        resolve(canvas.toDataURL('image/jpeg', quality));
+      };
+      img.onerror = reject;
+      img.src = e.target.result;
+    };
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
 }
 
 /* ==================== 云同步逻辑 ==================== */
@@ -774,7 +846,6 @@ function renderLog(app) {
     render();
   });
 
-  // 每日日志自动保存
   const logArea = $('#logArea');
   const logStatus = $('#logStatus');
   let logTimer = null;
@@ -984,7 +1055,6 @@ function renderPlan(app) {
   $('#prevDay').onclick = () => { planDate = fmtDate(new Date(parseDate(planDate).getTime() - 864e5)); render(); };
   $('#nextDay').onclick = () => { planDate = fmtDate(new Date(parseDate(planDate).getTime() + 864e5)); render(); };
   $('#todayBtn').onclick = () => { planDate = todayStr(); render(); };
-  $('#datePicker')?.addEventListener('change', () => {});
   $('#datePick').onchange = e => { planDate = e.target.value; render(); };
   $('#addModFromPlan').onclick = () => openModuleModal(null);
 }
@@ -1246,12 +1316,10 @@ function drawTrend(mods) {
   if (!cv || typeof Chart === 'undefined') return;
   if (trendChart) trendChart.destroy();
 
-  // 近 8 周
   const weeks = [];
   let w = getWeekStart(todayStr());
   for (let i = 7; i >= 0; i--) weeks.push(shiftWeek(w, -i));
 
-  // 找出 8 周内有数据的模块，最多 8 个
   const activeMods = mods.filter(m => {
     if (m.type === 'record') return false;
     return weeks.some(ws => (getWeekActuals(ws)[m.id] || 0) > 0);
@@ -1297,7 +1365,6 @@ function drawHeatmap() {
   const wrap = $('#heatWrap');
   if (!wrap) return;
 
-  // 近 12 周 = 84 天
   const today = new Date();
   const cells = [];
   for (let i = 83; i >= 0; i--) {
@@ -1311,9 +1378,8 @@ function drawHeatmap() {
 
   const max = Math.max(...cells.map(c => c.total), 1);
 
-  // 网格按列排列（每周一列），需要补齐头部
   const firstDate = parseDate(cells[0].date);
-  const firstDay = firstDate.getDay(); // 0=周日
+  const firstDay = firstDate.getDay();
   const ws = state.settings.weekStart;
   const offset = (firstDay - ws + 7) % 7;
   const padded = [];
@@ -1345,6 +1411,41 @@ function renderSettings(app) {
     <div class="section-head"><h2>设置</h2></div>
 
     <div class="card" style="margin-bottom:16px">
+      <div class="card-title">外观</div>
+      <div class="field">
+        <label>背景图</label>
+        <div class="bg-preview" id="bgPreview" style="${s.bgImage ? `background-image:url(${s.bgImage})` : ''}">
+          ${s.bgImage ? '' : '还没有设置背景图'}
+        </div>
+        <div class="row">
+          <input type="file" id="bgFile" accept="image/*" style="display:none">
+          <button class="btn primary" id="bgUploadBtn">上传图片</button>
+          <button class="btn" id="bgClearBtn">清除背景</button>
+        </div>
+        <div class="muted" style="margin-top:6px">建议用横向大图。图片会压缩后只存在本设备，不会同步到云端。</div>
+      </div>
+
+      <div class="field">
+        <label>背景遮罩暗度：<span id="overlayVal">${s.bgOverlay || 0}</span>%</label>
+        <input type="range" id="bgOverlay" min="0" max="80" value="${s.bgOverlay || 0}">
+        <div class="muted">值越大，背景越暗，文字越清晰。</div>
+      </div>
+
+      <div class="field">
+        <label>卡片不透明度：<span id="alphaVal">${s.cardAlpha || 100}</span>%</label>
+        <input type="range" id="cardAlpha" min="40" max="100" value="${s.cardAlpha || 100}">
+        <div class="muted">值越小，卡片越透，能看到更多背景。</div>
+      </div>
+
+      <div class="field"><label>主题</label>
+        <select id="setTheme">
+          <option value="light" ${s.theme === 'light' ? 'selected' : ''}>浅色</option>
+          <option value="dark" ${s.theme === 'dark' ? 'selected' : ''}>深色</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="card" style="margin-bottom:16px">
       <div class="card-title">基础设置</div>
       <div class="field"><label>每周起始日</label>
         <select id="setWeekStart">
@@ -1358,33 +1459,6 @@ function renderSettings(app) {
           <option value="15" ${s.minUnit === 15 ? 'selected' : ''}>15 分钟</option>
           <option value="30" ${s.minUnit === 30 ? 'selected' : ''}>30 分钟</option>
         </select>
-      </div>
-      <div class="field"><label>主题</label>
-        <select id="setTheme">
-          <option value="light" ${s.theme === 'light' ? 'selected' : ''}>浅色</option>
-          <option value="dark" ${s.theme === 'dark' ? 'selected' : ''}>深色</option>
-        </select>
-      </div>
-    </div>
-
-    <div class="card" style="margin-bottom:16px">
-      <div class="card-title">每日提醒</div>
-      <div class="field"><label>启用提醒</label>
-        <select id="reminderEnabled">
-          <option value="0" ${!s.reminderEnabled ? 'selected' : ''}>关闭</option>
-          <option value="1" ${s.reminderEnabled ? 'selected' : ''}>开启</option>
-        </select>
-      </div>
-      <div class="field"><label>提醒时间</label>
-        <input type="time" id="reminderTime" value="${s.reminderTime || '22:00'}">
-      </div>
-      <div class="row">
-        <button class="btn" id="testNotify">测试通知</button>
-        <button class="btn" id="requestPerm">请求通知权限</button>
-      </div>
-      <div class="muted" style="margin-top:12px">
-        提醒只在页面打开时生效。手机浏览器可能会暂停后台页面，这是浏览器限制。<br>
-        提示：把页面添加到主屏幕，可以让提醒更稳定。
       </div>
     </div>
 
@@ -1415,25 +1489,63 @@ function renderSettings(app) {
     </div>
   `;
 
-  $('#setWeekStart').onchange = e => { s.weekStart = Number(e.target.value); save(); toast('已保存'); };
-  $('#setUnit').onchange = e => { s.minUnit = Number(e.target.value); save(); toast('已保存'); };
+  // 背景图上传
+  $('#bgUploadBtn').onclick = () => $('#bgFile').click();
+  $('#bgFile').onchange = async e => {
+    const file = e.target.files[0];
+    if (!file) return;
+    if (!file.type.startsWith('image/')) { toast('请选择图片文件'); return; }
+    try {
+      toast('正在处理图片…');
+      const dataUrl = await compressImage(file, 1920, 0.82);
+      state.settings.bgImage = dataUrl;
+      save();
+      applyAppearance();
+      toast('背景已设置');
+      render();
+    } catch (err) {
+      toast('处理失败：' + err.message);
+    }
+  };
+  $('#bgClearBtn').onclick = () => {
+    if (!state.settings.bgImage) { toast('还没有背景图'); return; }
+    if (!confirm('确定清除背景图？')) return;
+    state.settings.bgImage = '';
+    save();
+    applyAppearance();
+    toast('已清除');
+    render();
+  };
+
+  // 遮罩暗度
+  $('#bgOverlay').oninput = e => {
+    const v = Number(e.target.value);
+    state.settings.bgOverlay = v;
+    document.documentElement.style.setProperty('--overlay-alpha', v / 100);
+    $('#overlayVal').textContent = v;
+  };
+  $('#bgOverlay').onchange = () => { save(); };
+
+  // 卡片透明度
+  $('#cardAlpha').oninput = e => {
+    const v = Number(e.target.value);
+    state.settings.cardAlpha = v;
+    document.documentElement.style.setProperty('--card-alpha', v / 100);
+    $('#alphaVal').textContent = v;
+  };
+  $('#cardAlpha').onchange = () => { save(); };
+
+  // 主题
   $('#setTheme').onchange = e => {
-    s.theme = e.target.value;
-    document.documentElement.dataset.theme = s.theme;
-    save(); toast('已切换');
+    state.settings.theme = e.target.value;
+    applyAppearance();
+    save();
+    toast('已切换');
     if (currentView === 'dashboard') render();
   };
-  $('#reminderEnabled').onchange = e => { s.reminderEnabled = Number(e.target.value) === 1; save(); toast('已保存'); };
-  $('#reminderTime').onchange = e => { s.reminderTime = e.target.value || '22:00'; save(); toast('已保存'); };
 
-  $('#testNotify').onclick = () => {
-    sendNotification('测试通知', '这是人生时间仪表盘的提醒测试。');
-  };
-  $('#requestPerm').onclick = async () => {
-    if (!('Notification' in window)) { toast('该浏览器不支持通知'); return; }
-    const p = await Notification.requestPermission();
-    toast('通知权限：' + p);
-  };
+  $('#setWeekStart').onchange = e => { state.settings.weekStart = Number(e.target.value); save(); toast('已保存'); };
+  $('#setUnit').onchange = e => { state.settings.minUnit = Number(e.target.value); save(); toast('已保存'); };
 
   $('#exportBtn').onclick = () => {
     download(`life-dashboard-${todayStr()}.json`, JSON.stringify(state, null, 2), 'application/json');
@@ -1442,19 +1554,14 @@ function renderSettings(app) {
 
   $('#exportMd').onclick = () => {
     let md = `# 人生时间仪表盘\n\n导出时间：${new Date().toLocaleString()}\n\n`;
-    // 日志
     const logKeys = Object.keys(state.logs).sort();
     if (logKeys.length) {
       md += `## 每日日志\n\n`;
-      logKeys.forEach(d => {
-        md += `### ${d}\n\n${state.logs[d]}\n\n`;
-      });
+      logKeys.forEach(d => { md += `### ${d}\n\n${state.logs[d]}\n\n`; });
     }
-    // 每周汇总
     md += `## 每周目标 vs 实际\n\n`;
     const allWeeks = new Set();
     state.entries.forEach(e => allWeeks.add(getWeekStart(e.date)));
-    // 加入本周
     allWeeks.add(getWeekStart(todayStr()));
     const weeksSorted = [...allWeeks].sort();
     weeksSorted.forEach(ws => {
@@ -1507,12 +1614,12 @@ function renderSettings(app) {
         state = data;
         state.settings = Object.assign({
           weekStart: 1, minUnit: 15, theme: 'light',
-          reminderEnabled: false, reminderTime: '22:00'
+          bgImage: '', bgOverlay: 0, cardAlpha: 100, bgBlur: 0
         }, state.settings || {});
         state.dayPlans = state.dayPlans || {};
         state.logs = state.logs || {};
         save();
-        document.documentElement.dataset.theme = state.settings.theme;
+        applyAppearance();
         reviewWeek = getWeekStart(todayStr());
         toast('导入成功');
         render();
@@ -1530,57 +1637,10 @@ function renderSettings(app) {
     localStorage.removeItem(STORE_KEY);
     state = defaultState();
     save();
+    applyAppearance();
     toast('已清空');
     render();
   };
-}
-
-/* ==================== 提醒逻辑 ==================== */
-let reminderTimer = null;
-function startReminderLoop() {
-  if (reminderTimer) clearInterval(reminderTimer);
-  reminderTimer = setInterval(checkReminder, 30 * 1000); // 每 30 秒检查一次
-  checkReminder();
-}
-function checkReminder() {
-  if (!state || !state.settings.reminderEnabled) return;
-  const now = new Date();
-  const hhmm = pad(now.getHours()) + ':' + pad(now.getMinutes());
-  const target = state.settings.reminderTime || '22:00';
-  if (hhmm !== target) return;
-
-  const today = todayStr();
-  const last = localStorage.getItem(REMIND_KEY);
-  if (last === today) return;
-  localStorage.setItem(REMIND_KEY, today);
-
-  const hasEntry = state.entries.some(e => e.date === today);
-  const hasLog = state.logs[today] && state.logs[today].trim();
-
-  let title = '人生时间仪表盘提醒';
-  let body = '';
-  if (!hasEntry && !hasLog) body = '今天的时间记录和日志都还没写，花 2 分钟记一下吧。';
-  else if (!hasEntry) body = '今天还没记录时间，现在记一下吧。';
-  else if (!hasLog) body = '今天还没写日志，花几分钟写几句吧。';
-  else return;
-
-  sendNotification(title, body);
-}
-function sendNotification(title, body) {
-  if (!('Notification' in window)) {
-    toast(title + '：' + body);
-    return;
-  }
-  if (Notification.permission === 'granted') {
-    try {
-      new Notification(title, {
-        body,
-        icon: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'%3E%3Crect width='192' height='192' rx='36' fill='%235b5bd6'/%3E%3Ctext x='96' y='132' font-size='110' text-anchor='middle' fill='white'%3E%E2%8F%B3%3C/text%3E%3C/svg%3E"
-      });
-    } catch (e) { toast(title + '：' + body); }
-  } else {
-    toast(title + '：' + body);
-  }
 }
 
 /* ==================== PWA 注册 ==================== */
@@ -1597,11 +1657,12 @@ function registerSW() {
 /* ==================== 初始化 ==================== */
 function init() {
   state = loadState();
-  document.documentElement.dataset.theme = state.settings.theme || 'light';
 
   viewDate = todayStr();
   planDate = todayStr();
   reviewWeek = getWeekStart(todayStr());
+
+  applyAppearance();
 
   $('#tabs').addEventListener('click', e => {
     const btn = e.target.closest('.tab');
@@ -1638,7 +1699,6 @@ function init() {
   }
 
   render();
-  startReminderLoop();
   registerSW();
 }
 

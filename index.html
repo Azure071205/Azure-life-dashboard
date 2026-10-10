@@ -145,7 +145,6 @@ input[type=color]{padding:2px;height:36px;width:46px;cursor:pointer}
 const SUPABASE_URL = 'https://hckumovfavghlxtwvdel.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imhja3Vtb3ZmYXZnaGx4dHd2ZGVsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTE2MDk2MTEsImV4cCI6MjEwNzE4NTYxMX0.yFnp5acJt9Rm3txsqyaaueMlmCOPCNkFjqsZKkP8v-k';
 
-// 注意：这里改名为 sbClient，避免和 Supabase CDN 自带的全局变量 supabase 冲突
 let sbClient = null;
 let currentUser = null;
 let syncTimeout = null;
@@ -299,30 +298,32 @@ async function syncFromCloud() {
     const { data: cp, error: e3 } = await sbClient.from('week_plans').select('*');
     if (e3) throw e3;
 
-    if (cm && cm.length) {
-      cm.forEach(item => {
-        const idx = state.modules.findIndex(m => m.id === item.id);
-        const mapped = {
-          id: item.id, name: item.name, color: item.color, type: item.type,
-          weekly: item.weekly, parentId: item.parent_id, order: item.order, archived: item.archived
-        };
-        if (idx >= 0) state.modules[idx] = mapped;
-        else state.modules.push(mapped);
-      });
+    const cloudEmpty = (!cm || cm.length === 0) && (!ce || ce.length === 0) && (!cp || cp.length === 0);
+
+    if (cloudEmpty) {
+      console.log('☁️ 云端为空，上传本地数据');
+      await syncToCloud();
+      save();
+      render();
+      return;
     }
 
-    if (ce && ce.length) {
-      const map = new Map(state.entries.map(e => [e.id, e]));
-      ce.forEach(item => {
-        map.set(item.id, {
-          id: item.id, date: item.date, start: item.start_time, end: item.end_time,
-          duration: item.duration, moduleId: item.module_id, note: item.note, createdAt: item.created_at
-        });
-      });
-      state.entries = [...map.values()];
+    if (cm) {
+      state.modules = cm.map(item => ({
+        id: item.id, name: item.name, color: item.color, type: item.type,
+        weekly: item.weekly, parentId: item.parent_id, order: item.order, archived: item.archived
+      }));
     }
 
-    if (cp && cp.length) {
+    if (ce) {
+      state.entries = ce.map(item => ({
+        id: item.id, date: item.date, start: item.start_time, end: item.end_time,
+        duration: item.duration, moduleId: item.module_id, note: item.note, createdAt: item.created_at
+      }));
+    }
+
+    if (cp) {
+      state.weekPlans = {};
       cp.forEach(item => {
         state.weekPlans[item.week_start] = {
           weekStart: item.week_start, targets: item.targets,
@@ -333,10 +334,29 @@ async function syncFromCloud() {
 
     save();
     render();
-    console.log('☁️ 云端数据已拉取并合并');
+    console.log('☁️ 云端数据已拉取并覆盖本地');
   } catch (err) {
     console.error('拉取云端数据失败', err);
   }
+}
+
+async function deleteFromCloud(table, id) {
+  if (!currentUser || !sbClient) return;
+  try {
+    const { error } = await sbClient.from(table).delete().eq('id', id).eq('user_id', currentUser.id);
+    if (error) console.error('云端删除失败', table, id, error);
+    else console.log('☁️ 云端已删除', table, id);
+  } catch (e) { console.error('云端删除异常', e); }
+}
+
+async function clearCloud() {
+  if (!currentUser || !sbClient) return;
+  try {
+    await sbClient.from('modules').delete().eq('user_id', currentUser.id);
+    await sbClient.from('entries').delete().eq('user_id', currentUser.id);
+    await sbClient.from('week_plans').delete().eq('user_id', currentUser.id);
+    console.log('☁️ 云端已清空');
+  } catch (e) { console.error('清空云端失败', e); }
 }
 
 /* ==================== 登录界面 ==================== */
@@ -712,8 +732,10 @@ function renderLog(app) {
     const btn = ev.target.closest('[data-del]');
     if (!btn) return;
     if (!confirm('删除这条记录？')) return;
-    state.entries = state.entries.filter(x => x.id !== btn.dataset.del);
+    const delId = btn.dataset.del;
+    state.entries = state.entries.filter(x => x.id !== delId);
     save();
+    deleteFromCloud('entries', delId);
     render();
   });
 
@@ -930,7 +952,9 @@ function renderModules(app) {
       if (used && !confirm('该模块已有记录，删除后这些记录将显示为「已删除模块」。确定删除？')) return;
       if (!used && !confirm('确定删除该模块？')) return;
       state.modules = state.modules.filter(x => x.id !== id);
-      save(); render();
+      save();
+      deleteFromCloud('modules', id);
+      render();
     }
   });
 
@@ -1181,9 +1205,10 @@ function renderSettings(app) {
     reader.readAsText(file);
   };
 
-  $('#resetBtn').onclick = () => {
+  $('#resetBtn').onclick = async () => {
     if (!confirm('确定清空所有模块、记录和周计划？此操作不可恢复。')) return;
     if (!confirm('再确认一次：真的要清空吗？')) return;
+    await clearCloud();
     localStorage.removeItem(STORE_KEY);
     state = defaultState();
     save();

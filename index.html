@@ -1,0 +1,1245 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>人生时间仪表盘</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#f4f5f9;--card:#fff;--text:#16181f;--dim:#6b7280;--border:#e6e8ee;
+  --accent:#5b5bd6;--accent-soft:#eef0fe;--green:#10b981;--red:#ef4444;--orange:#f59e0b;
+  --radius:14px;
+}
+html[data-theme="dark"]{
+  --bg:#0e1016;--card:#181b24;--text:#e8eaf0;--dim:#8b92a4;--border:#262b38;
+  --accent:#7c7cf0;--accent-soft:#23263a;
+}
+body{
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
+  background:var(--bg);color:var(--text);min-height:100vh;-webkit-font-smoothing:antialiased;
+  transition:background .2s,color .2s;
+}
+.topbar{
+  display:flex;align-items:center;gap:16px;padding:14px 22px;background:var(--card);
+  border-bottom:1px solid var(--border);position:sticky;top:0;z-index:50;flex-wrap:wrap;
+}
+.brand{font-weight:700;font-size:16px;white-space:nowrap}
+.tabs{display:flex;gap:4px;flex-wrap:wrap}
+.tab{
+  border:none;background:transparent;color:var(--dim);padding:7px 14px;border-radius:9px;
+  font-size:14px;cursor:pointer;font-family:inherit;transition:.15s;
+}
+.tab:hover{background:var(--accent-soft);color:var(--text)}
+.tab.active{background:var(--accent);color:#fff}
+.auth-area{margin-left:auto;display:flex;align-items:center;gap:10px}
+.auth-status{font-size:12px;color:var(--dim);max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+main{max-width:1180px;margin:0 auto;padding:22px 18px 60px}
+.section-head{display:flex;align-items:baseline;justify-content:space-between;margin:22px 0 12px;flex-wrap:wrap;gap:8px}
+.section-head h2{font-size:18px}
+.section-head h3{font-size:15px}
+.muted{color:var(--dim);font-size:13px}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px}
+.stat{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:14px 16px}
+.stat-label{font-size:12px;color:var(--dim);margin-bottom:6px}
+.stat-value{font-size:22px;font-weight:700;letter-spacing:-.5px}
+.stat-sub{font-size:12px;color:var(--dim);margin-top:4px}
+.mod-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(215px,1fr));gap:12px}
+.mod-card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:13px 15px}
+.mod-head{display:flex;align-items:center;gap:8px;margin-bottom:9px}
+.dot{width:10px;height:10px;border-radius:50%;flex:0 0 auto}
+.mod-name{font-weight:600;font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.mod-nums{display:flex;justify-content:space-between;font-size:12px;color:var(--dim);margin-bottom:7px}
+.mod-nums b{color:var(--text);font-weight:600}
+.bar{height:7px;background:var(--accent-soft);border-radius:99px;overflow:hidden}
+.bar-fill{height:100%;border-radius:99px;transition:width .4s ease}
+.mod-foot{margin-top:8px;font-size:12px}
+.ok{color:var(--green);font-weight:600}
+.bad{color:var(--red);font-weight:600}
+.charts{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:14px}
+@media(max-width:760px){.charts{grid-template-columns:1fr}}
+.card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:16px}
+.card-title{font-size:13px;font-weight:600;margin-bottom:12px;color:var(--dim)}
+canvas{max-height:270px}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th,td{padding:9px 10px;text-align:left;border-bottom:1px solid var(--border)}
+th{color:var(--dim);font-weight:500;font-size:12px}
+tr:last-child td{border-bottom:none}
+input,select,textarea{
+  font-family:inherit;font-size:14px;padding:8px 11px;border-radius:9px;border:1px solid var(--border);
+  background:var(--card);color:var(--text);outline:none;transition:.15s;
+}
+input:focus,select:focus,textarea:focus{border-color:var(--accent)}
+input[type=color]{padding:2px;height:36px;width:46px;cursor:pointer}
+.btn{
+  font-family:inherit;font-size:13px;padding:8px 15px;border-radius:9px;border:1px solid var(--border);
+  background:var(--card);color:var(--text);cursor:pointer;transition:.15s;
+}
+.btn:hover{border-color:var(--accent);color:var(--accent)}
+.btn.primary{background:var(--accent);color:#fff;border-color:var(--accent)}
+.btn.primary:hover{opacity:.88;color:#fff}
+.btn.danger{color:var(--red);border-color:var(--border)}
+.btn.danger:hover{border-color:var(--red)}
+.btn.sm{padding:5px 10px;font-size:12px}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.form-card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:16px;margin-bottom:16px}
+.entry{
+  display:flex;align-items:center;gap:12px;background:var(--card);border:1px solid var(--border);
+  border-radius:11px;padding:11px 14px;margin-bottom:8px;
+}
+.entry-time{font-size:12px;color:var(--dim);min-width:88px;font-variant-numeric:tabular-nums}
+.entry-name{font-weight:600;font-size:14px;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.entry-note{font-size:12px;color:var(--dim);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.entry-dur{font-size:13px;font-weight:600;font-variant-numeric:tabular-nums}
+.icon-btn{border:none;background:transparent;color:var(--dim);cursor:pointer;font-size:16px;padding:4px 6px;border-radius:7px}
+.icon-btn:hover{background:var(--accent-soft);color:var(--red)}
+.empty{color:var(--dim);font-size:13px;padding:26px 0;text-align:center}
+.week-nav{display:flex;align-items:center;gap:10px}
+.modal-mask{
+  position:fixed;inset:0;background:rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center;
+  z-index:100;padding:18px;
+}
+.modal{
+  background:var(--card);border-radius:16px;padding:22px;width:100%;max-width:420px;
+  border:1px solid var(--border);max-height:88vh;overflow:auto;
+}
+.modal h3{font-size:16px;margin-bottom:16px}
+.field{margin-bottom:13px}
+.field label{display:block;font-size:12px;color:var(--dim);margin-bottom:5px}
+.field input,.field select{width:100%}
+.modal-actions{display:flex;justify-content:flex-end;gap:9px;margin-top:18px}
+.timer-display{font-size:24px;font-weight:700;font-variant-numeric:tabular-nums;min-width:100px}
+.tag{font-size:11px;padding:2px 8px;border-radius:99px;background:var(--accent-soft);color:var(--dim)}
+.toast{
+  position:fixed;bottom:26px;left:50%;transform:translateX(-50%);background:var(--text);color:var(--bg);
+  padding:10px 20px;border-radius:99px;font-size:13px;z-index:200;opacity:0;transition:.3s;pointer-events:none;
+}
+.toast.show{opacity:1}
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="brand">⏳ 人生时间仪表盘</div>
+  <nav class="tabs" id="tabs">
+    <button class="tab active" data-view="dashboard">仪表盘</button>
+    <button class="tab" data-view="log">记录</button>
+    <button class="tab" data-view="plan">周计划</button>
+    <button class="tab" data-view="modules">模块</button>
+    <button class="tab" data-view="review">回顾</button>
+    <button class="tab" data-view="settings">设置</button>
+  </nav>
+  <div class="auth-area">
+    <span class="auth-status" id="authStatus"></span>
+    <button class="btn sm" id="authBtn">登录 / 注册</button>
+  </div>
+</header>
+
+<main id="app"></main>
+<div class="toast" id="toast"></div>
+
+<script>
+/* ==================== Supabase 配置 ==================== */
+const SUPABASE_URL = 'https://hckumovfavghlxtwvdel.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imhja3Vtb3ZmYXZnaGx4dHd2ZGVsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTE2MDk2MTEsImV4cCI6MjEwNzE4NTYxMX0.yFnp5acJt9Rm3txsqyaaueMlmCOPCNkFjqsZKkP8v-k';
+
+// 注意：这里改名为 sbClient，避免和 Supabase CDN 自带的全局变量 supabase 冲突
+let sbClient = null;
+let currentUser = null;
+let syncTimeout = null;
+
+try {
+  if (SUPABASE_URL.startsWith('http') && SUPABASE_ANON_KEY.length > 20) {
+    sbClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+  }
+} catch (e) { console.error('Supabase 初始化失败', e); }
+
+/* ==================== 工具函数 ==================== */
+const $ = (s, r = document) => r.querySelector(s);
+const $$ = (s, r = document) => [...r.querySelectorAll(s)];
+
+function uid(p = 'id') { return p + '_' + Math.random().toString(36).slice(2, 9); }
+function pad(n) { return String(n).padStart(2, '0'); }
+function fmtDate(d) { return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`; }
+function parseDate(s) { const [y, m, d] = s.split('-').map(Number); return new Date(y, m - 1, d); }
+function todayStr() { return fmtDate(new Date()); }
+function esc(s) {
+  return String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+}
+function fmtHours(min) {
+  if (min == null) return '—';
+  const h = min / 60;
+  if (Number.isInteger(h)) return h + 'h';
+  return (Math.round(h * 10) / 10) + 'h';
+}
+function fmtDuration(min) {
+  if (min == null) return '—';
+  const h = Math.floor(min / 60), m = min % 60;
+  if (h && m) return `${h}小时${m}分`;
+  if (h) return `${h}小时`;
+  return `${m}分钟`;
+}
+function toast(msg) {
+  const t = $('#toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(t._tid);
+  t._tid = setTimeout(() => t.classList.remove('show'), 1800);
+}
+
+/* ==================== 状态与持久化 ==================== */
+const STORE_KEY = 'life_dashboard_v1';
+
+function defaultState() {
+  return {
+    settings: { weekStart: 1, minUnit: 15, theme: 'light' },
+    modules: [
+      { id: 'm_sleep',   name: '睡眠',      color: '#7c5cff', type: 'fixed',  weekly: 3150, parentId: null, order: 0,  archived: false },
+      { id: 'm_work',    name: '工作/学业', color: '#3b82f6', type: 'manual', weekly: 2400, parentId: null, order: 1,  archived: false },
+      { id: 'm_commute', name: '通勤',      color: '#64748b', type: 'manual', weekly: 300,  parentId: null, order: 2,  archived: false },
+      { id: 'm_meals',   name: '吃饭洗漱',  color: '#f59e0b', type: 'manual', weekly: 600,  parentId: null, order: 3,  archived: false },
+      { id: 'm_chores',  name: '家务',      color: '#a8a29e', type: 'manual', weekly: 300,  parentId: null, order: 4,  archived: false },
+      { id: 'm_health',  name: '健康运动',  color: '#10b981', type: 'manual', weekly: 480,  parentId: null, order: 5,  archived: false },
+      { id: 'm_learn',   name: '学习成长',  color: '#06b6d4', type: 'manual', weekly: 360,  parentId: null, order: 6,  archived: false },
+      { id: 'm_family',  name: '家庭关系',  color: '#ec4899', type: 'manual', weekly: 360,  parentId: null, order: 7,  archived: false },
+      { id: 'm_create',  name: '创作事业',  color: '#8b5cf6', type: 'manual', weekly: 300,  parentId: null, order: 8,  archived: false },
+      { id: 'm_social',  name: '社交朋友',  color: '#f97316', type: 'manual', weekly: 180,  parentId: null, order: 9,  archived: false },
+      { id: 'm_fun',     name: '休闲娱乐',  color: '#eab308', type: 'manual', weekly: 240,  parentId: null, order: 10, archived: false },
+      { id: 'm_reflect', name: '精神反思',  color: '#14b8a6', type: 'manual', weekly: 120,  parentId: null, order: 11, archived: false },
+      { id: 'm_other',   name: '未分类',    color: '#9ca3af', type: 'record', weekly: 0,    parentId: null, order: 12, archived: false }
+    ],
+    weekPlans: {},
+    entries: []
+  };
+}
+
+let state = null;
+
+function loadState() {
+  try {
+    const raw = localStorage.getItem(STORE_KEY);
+    if (raw) {
+      const s = JSON.parse(raw);
+      s.settings = Object.assign({ weekStart: 1, minUnit: 15, theme: 'light' }, s.settings || {});
+      s.modules = s.modules || [];
+      s.weekPlans = s.weekPlans || {};
+      s.entries = s.entries || [];
+      return s;
+    }
+  } catch (e) { console.error(e); }
+  return defaultState();
+}
+
+function save() {
+  try { localStorage.setItem(STORE_KEY, JSON.stringify(state)); }
+  catch (e) { console.error('保存失败', e); }
+  if (currentUser) {
+    clearTimeout(syncTimeout);
+    syncTimeout = setTimeout(() => { syncToCloud(); }, 2000);
+  }
+}
+
+/* ==================== 云同步逻辑 ==================== */
+async function syncToCloud() {
+  if (!currentUser || !sbClient) return;
+  try {
+    if (state.modules.length) {
+      const payload = state.modules.map(m => ({
+        id: m.id, user_id: currentUser.id, name: m.name, color: m.color,
+        type: m.type, weekly: m.weekly, parent_id: m.parentId,
+        order: m.order, archived: m.archived, updated_at: new Date().toISOString()
+      }));
+      const { error } = await sbClient.from('modules').upsert(payload);
+      if (error) console.error('同步模块失败', error);
+    }
+
+    if (state.entries.length) {
+      const payload = state.entries.map(e => ({
+        id: e.id, user_id: currentUser.id, date: e.date,
+        start_time: e.start, end_time: e.end, duration: e.duration,
+        module_id: e.moduleId, note: e.note, created_at: e.createdAt,
+        updated_at: new Date().toISOString()
+      }));
+      const chunkSize = 300;
+      for (let i = 0; i < payload.length; i += chunkSize) {
+        const chunk = payload.slice(i, i + chunkSize);
+        const { error } = await sbClient.from('entries').upsert(chunk);
+        if (error) console.error('同步记录失败', error);
+      }
+    }
+
+    const plans = Object.values(state.weekPlans);
+    if (plans.length) {
+      const payload = plans.map(p => ({
+        id: p.weekStart, user_id: currentUser.id, week_start: p.weekStart,
+        targets: p.targets, snapshot: p.snapshot, created_at: p.createdAt,
+        updated_at: new Date().toISOString()
+      }));
+      const { error } = await sbClient.from('week_plans').upsert(payload);
+      if (error) console.error('同步周计划失败', error);
+    }
+
+    console.log('☁️ 云端同步完成');
+  } catch (err) {
+    console.error('同步异常', err);
+  }
+}
+
+async function syncFromCloud() {
+  if (!currentUser || !sbClient) return;
+  try {
+    const { data: cm, error: e1 } = await sbClient.from('modules').select('*');
+    if (e1) throw e1;
+
+    const { data: ce, error: e2 } = await sbClient.from('entries').select('*');
+    if (e2) throw e2;
+
+    const { data: cp, error: e3 } = await sbClient.from('week_plans').select('*');
+    if (e3) throw e3;
+
+    if (cm && cm.length) {
+      cm.forEach(item => {
+        const idx = state.modules.findIndex(m => m.id === item.id);
+        const mapped = {
+          id: item.id, name: item.name, color: item.color, type: item.type,
+          weekly: item.weekly, parentId: item.parent_id, order: item.order, archived: item.archived
+        };
+        if (idx >= 0) state.modules[idx] = mapped;
+        else state.modules.push(mapped);
+      });
+    }
+
+    if (ce && ce.length) {
+      const map = new Map(state.entries.map(e => [e.id, e]));
+      ce.forEach(item => {
+        map.set(item.id, {
+          id: item.id, date: item.date, start: item.start_time, end: item.end_time,
+          duration: item.duration, moduleId: item.module_id, note: item.note, createdAt: item.created_at
+        });
+      });
+      state.entries = [...map.values()];
+    }
+
+    if (cp && cp.length) {
+      cp.forEach(item => {
+        state.weekPlans[item.week_start] = {
+          weekStart: item.week_start, targets: item.targets,
+          snapshot: item.snapshot, createdAt: item.created_at
+        };
+      });
+    }
+
+    save();
+    render();
+    console.log('☁️ 云端数据已拉取并合并');
+  } catch (err) {
+    console.error('拉取云端数据失败', err);
+  }
+}
+
+/* ==================== 登录界面 ==================== */
+function openAuthModal() {
+  const mask = document.createElement('div');
+  mask.className = 'modal-mask';
+  mask.innerHTML = `
+    <div class="modal">
+      <h3>登录 / 注册</h3>
+      <div class="field"><label>邮箱</label><input id="authEmail" type="email" placeholder="you@example.com"></div>
+      <div class="field"><label>密码</label><input id="authPassword" type="password" placeholder="至少 6 位"></div>
+      <div class="modal-actions">
+        <button class="btn" id="authCancel">取消</button>
+        <button class="btn primary" id="authLogin">登录</button>
+        <button class="btn primary" id="authSignUp" style="background:#10b981;border-color:#10b981">注册</button>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(mask);
+
+  const close = () => mask.remove();
+  mask.addEventListener('click', e => { if (e.target === mask) close(); });
+  $('#authCancel', mask).onclick = close;
+
+  $('#authLogin', mask).onclick = async () => {
+    const email = $('#authEmail', mask).value.trim();
+    const password = $('#authPassword', mask).value;
+    if (!email || !password) { toast('请填写邮箱和密码'); return; }
+    const { error } = await sbClient.auth.signInWithPassword({ email, password });
+    if (error) { toast('登录失败：' + error.message); return; }
+    close();
+    toast('登录成功');
+  };
+
+  $('#authSignUp', mask).onclick = async () => {
+    const email = $('#authEmail', mask).value.trim();
+    const password = $('#authPassword', mask).value;
+    if (!email || !password) { toast('请填写邮箱和密码'); return; }
+    const { error } = await sbClient.auth.signUp({ email, password });
+    if (error) { toast('注册失败：' + error.message); return; }
+    toast('注册成功，请检查邮箱（若开启了验证）');
+    close();
+  };
+}
+
+/* ==================== 日期工具 ==================== */
+function getWeekStart(dateStr) {
+  const d = parseDate(dateStr);
+  const ws = state.settings.weekStart;
+  const diff = (d.getDay() - ws + 7) % 7;
+  d.setDate(d.getDate() - diff);
+  return fmtDate(d);
+}
+function getWeekDays(ws) {
+  const d = parseDate(ws), out = [];
+  for (let i = 0; i < 7; i++) { out.push(fmtDate(d)); d.setDate(d.getDate() + 1); }
+  return out;
+}
+function shiftWeek(ws, n) {
+  const d = parseDate(ws);
+  d.setDate(d.getDate() + n * 7);
+  return fmtDate(d);
+}
+const WEEK_NAMES = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'];
+
+/* ==================== 周计划 ==================== */
+function getWeekPlan(ws, create = true) {
+  let p = state.weekPlans[ws];
+  if (!p && create) {
+    p = { weekStart: ws, targets: {}, snapshot: {}, createdAt: Date.now() };
+    state.modules.filter(m => !m.archived).forEach(m => {
+      p.targets[m.id] = m.type === 'record' ? null : (m.weekly || 0);
+      p.snapshot[m.id] = { name: m.name, color: m.color, type: m.type };
+    });
+    state.weekPlans[ws] = p;
+    save();
+  }
+  return p;
+}
+
+function getWeekModules(ws) {
+  const plan = getWeekPlan(ws);
+  const isPast = ws < getWeekStart(todayStr());
+  const out = [];
+  if (isPast) {
+    for (const id in plan.snapshot) {
+      const s = plan.snapshot[id];
+      out.push({ id, name: s.name, color: s.color, type: s.type, target: plan.targets[id] ?? null });
+    }
+    out.sort((a, b) => (a.type === 'fixed' ? -1 : 1) - (b.type === 'fixed' ? -1 : 1));
+  } else {
+    let dirty = false;
+    state.modules.filter(m => !m.archived).sort((a, b) => a.order - b.order).forEach(m => {
+      if (!(m.id in plan.targets)) {
+        plan.targets[m.id] = m.type === 'record' ? null : (m.weekly || 0);
+        plan.snapshot[m.id] = { name: m.name, color: m.color, type: m.type };
+        dirty = true;
+      }
+      out.push({ id: m.id, name: m.name, color: m.color, type: m.type, target: plan.targets[m.id] ?? null });
+    });
+    if (dirty) save();
+  }
+  return out;
+}
+
+/* ==================== 实际记录汇总 ==================== */
+function getWeekEntries(ws) {
+  const set = new Set(getWeekDays(ws));
+  return state.entries.filter(e => set.has(e.date));
+}
+function getWeekActuals(ws) {
+  const totals = {};
+  getWeekEntries(ws).forEach(e => {
+    totals[e.moduleId] = (totals[e.moduleId] || 0) + e.duration;
+  });
+  return totals;
+}
+
+/* ==================== 视图路由 ==================== */
+let currentView = 'dashboard';
+let viewDate = todayStr();
+let planWeek = null;
+let reviewWeek = null;
+let donutChart = null, stackChart = null;
+
+function render() {
+  const app = $('#app');
+  if (currentView === 'dashboard') renderDashboard(app);
+  else if (currentView === 'log') renderLog(app);
+  else if (currentView === 'plan') renderPlan(app);
+  else if (currentView === 'modules') renderModules(app);
+  else if (currentView === 'review') renderReview(app);
+  else if (currentView === 'settings') renderSettings(app);
+}
+
+/* ==================== 仪表盘 ==================== */
+function renderDashboard(app) {
+  const ws = getWeekStart(todayStr());
+  const days = getWeekDays(ws);
+  const mods = getWeekModules(ws);
+  const actuals = getWeekActuals(ws);
+  const TOTAL = 168 * 60;
+
+  let fixedMin = 0, manualMin = 0;
+  mods.forEach(m => {
+    if (m.type === 'fixed') fixedMin += (m.target || 0);
+    else if (m.type === 'manual') manualMin += (m.target || 0);
+  });
+  const allocMin = TOTAL - fixedMin;
+  const unassignedMin = allocMin - manualMin;
+
+  let recordedMin = 0;
+  for (const k in actuals) recordedMin += actuals[k];
+  const unrecordedMin = Math.max(0, TOTAL - recordedMin);
+
+  app.innerHTML = `
+    <div class="section-head">
+      <h2>本周总览</h2>
+      <div class="muted">${ws} ~ ${days[6]}（自然周）</div>
+    </div>
+    <div class="stats">
+      <div class="stat"><div class="stat-label">一周总时间</div><div class="stat-value">168h</div><div class="stat-sub">7 × 24 小时</div></div>
+      <div class="stat"><div class="stat-label">固定</div><div class="stat-value">${fmtHours(fixedMin)}</div><div class="stat-sub">已锁定</div></div>
+      <div class="stat"><div class="stat-label">可分配</div><div class="stat-value">${fmtHours(allocMin)}</div><div class="stat-sub">未分配 ${fmtHours(Math.max(0, unassignedMin))}</div></div>
+      <div class="stat"><div class="stat-label">已记录</div><div class="stat-value">${fmtHours(recordedMin)}</div><div class="stat-sub">未记录 ${fmtHours(unrecordedMin)}</div></div>
+    </div>
+    <div class="section-head"><h3>模块进度</h3><div class="muted">目标 vs 实际</div></div>
+    <div class="mod-grid" id="modGrid"></div>
+    <div class="charts">
+      <div class="card"><div class="card-title">本周实际时间分布</div><canvas id="donut"></canvas></div>
+      <div class="card"><div class="card-title">每日时间分布（小时）</div><canvas id="stack"></canvas></div>
+    </div>
+  `;
+
+  const grid = $('#modGrid');
+  if (!mods.length) grid.innerHTML = '<div class="empty">还没有模块，去「模块」页面添加吧</div>';
+
+  mods.forEach(m => {
+    const actual = actuals[m.id] || 0;
+    const target = m.target;
+    const el = document.createElement('div');
+    el.className = 'mod-card';
+    let pct = 0, foot = '';
+    if (target) {
+      pct = Math.min(100, Math.round(actual / target * 100));
+      const diff = actual - target;
+      foot = diff >= 0
+        ? `<span class="ok">已达成 +${fmtHours(diff)}</span>`
+        : `<span class="bad">还差 ${fmtHours(-diff)}</span>`;
+    } else {
+      foot = `<span class="muted">仅记录，不设目标</span>`;
+    }
+    el.innerHTML = `
+      <div class="mod-head">
+        <span class="dot" style="background:${m.color}"></span>
+        <span class="mod-name">${esc(m.name)}</span>
+      </div>
+      <div class="mod-nums">
+        <span>目标 <b>${target ? fmtHours(target) : '—'}</b></span>
+        <span>实际 <b>${fmtHours(actual)}</b></span>
+      </div>
+      <div class="bar"><div class="bar-fill" style="width:${pct}%;background:${m.color}"></div></div>
+      <div class="mod-foot">${foot}</div>
+    `;
+    grid.appendChild(el);
+  });
+
+  drawDonut(mods, actuals);
+  drawStack(days, mods, ws);
+}
+
+function drawDonut(mods, actuals) {
+  const cv = $('#donut');
+  if (!cv || typeof Chart === 'undefined') return;
+  if (donutChart) donutChart.destroy();
+  const labels = [], data = [], colors = [];
+  mods.forEach(m => {
+    const v = actuals[m.id] || 0;
+    if (v > 0) { labels.push(m.name); data.push(v / 60); colors.push(m.color); }
+  });
+  if (!data.length) {
+    cv.parentElement.innerHTML = '<div class="card-title">本周实际时间分布</div><div class="empty">本周还没有记录</div>';
+    return;
+  }
+  const dark = state.settings.theme === 'dark';
+  donutChart = new Chart(cv, {
+    type: 'doughnut',
+    data: { labels, datasets: [{ data, backgroundColor: colors, borderWidth: 0 }] },
+    options: {
+      responsive: true, maintainAspectRatio: true, cutout: '62%',
+      plugins: {
+        legend: { position: 'right', labels: { color: dark ? '#e8eaf0' : '#16181f', boxWidth: 10, font: { size: 12 } } },
+        tooltip: { callbacks: { label: c => ` ${c.label}: ${c.parsed.toFixed(1)}h` } }
+      }
+    }
+  });
+}
+
+function drawStack(days, mods, ws) {
+  const cv = $('#stack');
+  if (!cv || typeof Chart === 'undefined') return;
+  if (stackChart) stackChart.destroy();
+
+  const byDay = {};
+  days.forEach(d => byDay[d] = {});
+  getWeekEntries(ws).forEach(e => {
+    if (!byDay[e.date]) return;
+    byDay[e.date][e.moduleId] = (byDay[e.date][e.moduleId] || 0) + e.duration;
+  });
+
+  const datasets = [];
+  mods.forEach(m => {
+    const data = days.map(d => ((byDay[d] || {})[m.id] || 0) / 60);
+    if (data.some(v => v > 0)) {
+      datasets.push({ label: m.name, data, backgroundColor: m.color, borderRadius: 4, stack: 's' });
+    }
+  });
+
+  if (!datasets.length) {
+    cv.parentElement.innerHTML = '<div class="card-title">每日时间分布（小时）</div><div class="empty">本周还没有记录</div>';
+    return;
+  }
+
+  const dark = state.settings.theme === 'dark';
+  const gridColor = dark ? '#262b38' : '#e6e8ee';
+  const tickColor = dark ? '#8b92a4' : '#6b7280';
+
+  stackChart = new Chart(cv, {
+    type: 'bar',
+    data: { labels: days.map(d => d.slice(5)), datasets },
+    options: {
+      responsive: true, maintainAspectRatio: true,
+      scales: {
+        x: { stacked: true, grid: { display: false }, ticks: { color: tickColor, font: { size: 11 } } },
+        y: { stacked: true, grid: { color: gridColor }, ticks: { color: tickColor, font: { size: 11 } } }
+      },
+      plugins: {
+        legend: { display: false },
+        tooltip: { callbacks: { label: c => ` ${c.dataset.label}: ${c.parsed.y.toFixed(1)}h` } }
+      }
+    }
+  });
+}
+
+/* ==================== 记录页 ==================== */
+let timerState = { moduleId: null, start: null, tid: null };
+
+function renderLog(app) {
+  const mods = state.modules.filter(m => !m.archived).sort((a, b) => a.order - b.order);
+  const modMap = {};
+  mods.forEach(m => modMap[m.id] = m);
+
+  const dayEntries = state.entries
+    .filter(e => e.date === viewDate)
+    .sort((a, b) => (a.start || '').localeCompare(b.start || '') || a.createdAt - b.createdAt);
+
+  const dObj = parseDate(viewDate);
+  const totalMin = dayEntries.reduce((s, e) => s + e.duration, 0);
+
+  const modOptions = mods.map(m => `<option value="${m.id}">${esc(m.name)}</option>`).join('');
+
+  app.innerHTML = `
+    <div class="section-head">
+      <h2>每日记录</h2>
+      <div class="week-nav">
+        <button class="btn sm" id="prevDay">← 前一天</button>
+        <input type="date" id="datePick" value="${viewDate}">
+        <button class="btn sm" id="nextDay">后一天 →</button>
+        <button class="btn sm" id="todayBtn">今天</button>
+      </div>
+    </div>
+
+    <div class="form-card">
+      <div class="card-title">快速添加</div>
+      <div class="row">
+        <select id="addModule" style="min-width:140px">${modOptions}</select>
+        <input type="number" id="addHours" step="0.25" min="0.25" placeholder="时长（小时）" style="width:130px">
+        <input type="text" id="addNote" placeholder="备注（可选）" style="flex:1;min-width:130px">
+        <button class="btn primary" id="addBtn">添加</button>
+      </div>
+    </div>
+
+    <div class="form-card">
+      <div class="card-title">按时间段添加</div>
+      <div class="row">
+        <select id="tbModule" style="min-width:140px">${modOptions}</select>
+        <input type="time" id="tbStart" value="09:00">
+        <span class="muted">到</span>
+        <input type="time" id="tbEnd" value="10:00">
+        <input type="text" id="tbNote" placeholder="备注（可选）" style="flex:1;min-width:130px">
+        <button class="btn primary" id="tbBtn">添加</button>
+      </div>
+    </div>
+
+    <div class="form-card">
+      <div class="card-title">计时器</div>
+      <div class="row">
+        <select id="tmModule" style="min-width:140px">${modOptions}</select>
+        <div class="timer-display" id="tmDisplay">00:00:00</div>
+        <button class="btn primary" id="tmStart">开始</button>
+        <button class="btn" id="tmStop" disabled>停止并保存</button>
+      </div>
+    </div>
+
+    <div class="section-head">
+      <h3>${viewDate}（${WEEK_NAMES[dObj.getDay()]}）</h3>
+      <div class="muted">共 ${fmtDuration(totalMin)}</div>
+    </div>
+    <div id="entryList"></div>
+  `;
+
+  const list = $('#entryList');
+  if (!dayEntries.length) {
+    list.innerHTML = '<div class="empty">这一天还没有记录</div>';
+  }
+  dayEntries.forEach(e => {
+    const m = modMap[e.moduleId];
+    const el = document.createElement('div');
+    el.className = 'entry';
+    const timeLabel = e.start ? `${e.start} - ${e.end || ''}` : '手动输入';
+    el.innerHTML = `
+      <span class="dot" style="background:${m ? m.color : '#9ca3af'}"></span>
+      <span class="entry-time">${timeLabel}</span>
+      <span class="entry-name">${esc(m ? m.name : '已删除模块')}</span>
+      ${e.note ? `<span class="entry-note">${esc(e.note)}</span>` : ''}
+      <span class="entry-dur">${fmtDuration(e.duration)}</span>
+      <button class="icon-btn" data-del="${e.id}" title="删除">✕</button>
+    `;
+    list.appendChild(el);
+  });
+
+  list.addEventListener('click', ev => {
+    const btn = ev.target.closest('[data-del]');
+    if (!btn) return;
+    if (!confirm('删除这条记录？')) return;
+    state.entries = state.entries.filter(x => x.id !== btn.dataset.del);
+    save();
+    render();
+  });
+
+  $('#prevDay').onclick = () => { viewDate = fmtDate(new Date(parseDate(viewDate).getTime() - 864e5)); render(); };
+  $('#nextDay').onclick = () => { viewDate = fmtDate(new Date(parseDate(viewDate).getTime() + 864e5)); render(); };
+  $('#todayBtn').onclick = () => { viewDate = todayStr(); render(); };
+  $('#datePick').onchange = e => { viewDate = e.target.value; render(); };
+
+  $('#addBtn').onclick = () => {
+    const moduleId = $('#addModule').value;
+    const hours = parseFloat($('#addHours').value);
+    if (!moduleId || !hours || hours <= 0) { toast('请填写模块和时长'); return; }
+    const unit = state.settings.minUnit;
+    let duration = Math.round(hours * 60);
+    duration = Math.max(unit, Math.round(duration / unit) * unit);
+    state.entries.push({
+      id: uid('e'), date: viewDate, start: null, end: null,
+      duration, moduleId, note: $('#addNote').value.trim(), createdAt: Date.now()
+    });
+    save(); toast('已添加'); render();
+  };
+
+  $('#tbBtn').onclick = () => {
+    const moduleId = $('#tbModule').value;
+    const s = $('#tbStart').value, e2 = $('#tbEnd').value;
+    if (!moduleId || !s || !e2) { toast('请填写完整'); return; }
+    const [sh, sm] = s.split(':').map(Number);
+    const [eh, em] = e2.split(':').map(Number);
+    let duration = (eh * 60 + em) - (sh * 60 + sm);
+    if (duration <= 0) { toast('结束时间要晚于开始时间'); return; }
+    state.entries.push({
+      id: uid('e'), date: viewDate, start: s, end: e2,
+      duration, moduleId, note: $('#tbNote').value.trim(), createdAt: Date.now()
+    });
+    save(); toast('已添加'); render();
+  };
+
+  if (timerState.start) {
+    $('#tmStart').disabled = true;
+    $('#tmStop').disabled = false;
+    $('#tmModule').value = timerState.moduleId;
+    timerState.tid = setInterval(tickTimer, 1000);
+    tickTimer();
+  }
+  $('#tmStart').onclick = () => {
+    const moduleId = $('#tmModule').value;
+    if (!moduleId) { toast('请选择模块'); return; }
+    timerState = { moduleId, start: Date.now(), tid: null };
+    timerState.tid = setInterval(tickTimer, 1000);
+    $('#tmStart').disabled = true;
+    $('#tmStop').disabled = false;
+    tickTimer();
+  };
+  $('#tmStop').onclick = () => {
+    if (!timerState.start) return;
+    clearInterval(timerState.tid);
+    const seconds = Math.round((Date.now() - timerState.start) / 1000);
+    const unit = state.settings.minUnit;
+    let duration = Math.max(unit, Math.round(seconds / 60 / unit) * unit);
+    state.entries.push({
+      id: uid('e'), date: viewDate, start: null, end: null,
+      duration, moduleId: timerState.moduleId, note: '计时器记录', createdAt: Date.now()
+    });
+    timerState = { moduleId: null, start: null, tid: null };
+    save(); toast('已保存 ' + fmtDuration(duration)); render();
+  };
+}
+
+function tickTimer() {
+  if (!timerState.start) return;
+  const el = $('#tmDisplay');
+  if (!el) return;
+  const sec = Math.floor((Date.now() - timerState.start) / 1000);
+  const h = String(Math.floor(sec / 3600)).padStart(2, '0');
+  const m = String(Math.floor(sec % 3600 / 60)).padStart(2, '0');
+  const s = String(sec % 60).padStart(2, '0');
+  el.textContent = `${h}:${m}:${s}`;
+}
+
+/* ==================== 周计划页 ==================== */
+function renderPlan(app) {
+  const ws = planWeek;
+  const days = getWeekDays(ws);
+  const mods = getWeekModules(ws);
+  const plan = getWeekPlan(ws);
+
+  const TOTAL = 168 * 60;
+  let fixedMin = 0, manualMin = 0;
+  mods.forEach(m => {
+    if (m.type === 'fixed') fixedMin += (m.target || 0);
+    else if (m.type === 'manual') manualMin += (m.target || 0);
+  });
+  const allocMin = TOTAL - fixedMin;
+  const rest = allocMin - manualMin;
+
+  app.innerHTML = `
+    <div class="section-head">
+      <h2>周计划</h2>
+      <div class="week-nav">
+        <button class="btn sm" id="prevWeek">← 上一周</button>
+        <span class="muted">${ws} ~ ${days[6]}</span>
+        <button class="btn sm" id="nextWeek">下一周 →</button>
+        <button class="btn sm" id="thisWeek">本周</button>
+      </div>
+    </div>
+
+    <div class="stats" style="margin-bottom:16px">
+      <div class="stat"><div class="stat-label">固定</div><div class="stat-value">${fmtHours(fixedMin)}</div></div>
+      <div class="stat"><div class="stat-label">可分配</div><div class="stat-value">${fmtHours(allocMin)}</div></div>
+      <div class="stat"><div class="stat-label">已分配</div><div class="stat-value">${fmtHours(manualMin)}</div></div>
+      <div class="stat"><div class="stat-label">${rest >= 0 ? '未分配' : '超出'}</div>
+        <div class="stat-value" style="color:${rest >= 0 ? 'var(--green)' : 'var(--red)'}">${fmtHours(Math.abs(rest))}</div></div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">各模块每周目标（小时，可填小数）</div>
+      <table>
+        <thead><tr><th>模块</th><th>类型</th><th style="width:150px">每周目标</th></tr></thead>
+        <tbody id="planBody"></tbody>
+      </table>
+    </div>
+    <div class="muted" style="margin-top:12px">修改后自动保存。历史周的目标不会因模块改名而改变。</div>
+  `;
+
+  const tbody = $('#planBody');
+  const typeLabel = { fixed: '固定', manual: '手动目标', record: '仅记录' };
+
+  mods.forEach(m => {
+    const tr = document.createElement('tr');
+    const editable = m.type !== 'record';
+    tr.innerHTML = `
+      <td><span class="dot" style="display:inline-block;background:${m.color};margin-right:7px"></span>${esc(m.name)}</td>
+      <td><span class="tag">${typeLabel[m.type] || m.type}</span></td>
+      <td>${editable
+        ? `<input type="number" step="0.25" min="0" style="width:100px" value="${m.target ? (m.target / 60) : 0}" data-mid="${m.id}">`
+        : '<span class="muted">—</span>'}</td>
+    `;
+    tbody.appendChild(tr);
+  });
+
+  tbody.addEventListener('change', ev => {
+    const inp = ev.target.closest('[data-mid]');
+    if (!inp) return;
+    const mid = inp.dataset.mid;
+    const hours = parseFloat(inp.value) || 0;
+    plan.targets[mid] = Math.round(hours * 60);
+    save();
+    toast('已更新');
+    render();
+  });
+
+  $('#prevWeek').onclick = () => { planWeek = shiftWeek(planWeek, -1); render(); };
+  $('#nextWeek').onclick = () => { planWeek = shiftWeek(planWeek, 1); render(); };
+  $('#thisWeek').onclick = () => { planWeek = getWeekStart(todayStr()); render(); };
+}
+
+/* ==================== 模块管理页 ==================== */
+function renderModules(app) {
+  const mods = [...state.modules].sort((a, b) => a.order - b.order);
+  const typeLabel = { fixed: '固定', manual: '手动目标', record: '仅记录' };
+  const typeColor = { fixed: '#7c5cff', manual: '#3b82f6', record: '#9ca3af' };
+
+  app.innerHTML = `
+    <div class="section-head">
+      <h2>模块管理</h2>
+      <button class="btn primary" id="addMod">+ 新建模块</button>
+    </div>
+    <div class="card">
+      <table>
+        <thead><tr><th style="width:30px"></th><th>名称</th><th>类型</th><th>默认周目标</th><th>状态</th><th style="width:150px"></th></tr></thead>
+        <tbody id="modBody"></tbody>
+      </table>
+    </div>
+    <div class="muted" style="margin-top:12px">
+      固定 = 每周写死（如睡眠）；手动目标 = 每周可在「周计划」里调整；仅记录 = 不设目标，只统计实际。
+    </div>
+  `;
+
+  const tbody = $('#modBody');
+  if (!mods.length) tbody.innerHTML = '<tr><td colspan="6" class="empty">还没有模块</td></tr>';
+
+  mods.forEach(m => {
+    const tr = document.createElement('tr');
+    if (m.archived) tr.style.opacity = '.45';
+    tr.innerHTML = `
+      <td><span class="dot" style="background:${m.color}"></span></td>
+      <td style="font-weight:600">${esc(m.name)}</td>
+      <td><span class="tag" style="background:${typeColor[m.type]}22;color:${typeColor[m.type]}">${typeLabel[m.type]}</span></td>
+      <td>${m.type === 'record' ? '<span class="muted">—</span>' : fmtHours(m.weekly)}</td>
+      <td>${m.archived ? '<span class="muted">已归档</span>' : '<span class="ok">使用中</span>'}</td>
+      <td>
+        <button class="btn sm" data-edit="${m.id}">编辑</button>
+        <button class="btn sm" data-arch="${m.id}">${m.archived ? '恢复' : '归档'}</button>
+        <button class="btn sm danger" data-del="${m.id}">删除</button>
+      </td>
+    `;
+    tbody.appendChild(tr);
+  });
+
+  tbody.addEventListener('click', ev => {
+    const editBtn = ev.target.closest('[data-edit]');
+    const archBtn = ev.target.closest('[data-arch]');
+    const delBtn = ev.target.closest('[data-del]');
+
+    if (editBtn) openModuleModal(editBtn.dataset.edit);
+    if (archBtn) {
+      const m = state.modules.find(x => x.id === archBtn.dataset.arch);
+      m.archived = !m.archived;
+      save(); render();
+    }
+    if (delBtn) {
+      const id = delBtn.dataset.del;
+      const used = state.entries.some(e => e.moduleId === id);
+      if (used && !confirm('该模块已有记录，删除后这些记录将显示为「已删除模块」。确定删除？')) return;
+      if (!used && !confirm('确定删除该模块？')) return;
+      state.modules = state.modules.filter(x => x.id !== id);
+      save(); render();
+    }
+  });
+
+  $('#addMod').onclick = () => openModuleModal(null);
+}
+
+function openModuleModal(id) {
+  const isNew = !id;
+  const m = isNew
+    ? { id: uid('m'), name: '', color: '#6366f1', type: 'manual', weekly: 0, parentId: null, order: state.modules.length, archived: false }
+    : { ...state.modules.find(x => x.id === id) };
+
+  const parents = state.modules.filter(x => x.id !== m.id && !x.parentId);
+
+  const mask = document.createElement('div');
+  mask.className = 'modal-mask';
+  mask.innerHTML = `
+    <div class="modal">
+      <h3>${isNew ? '新建模块' : '编辑模块'}</h3>
+      <div class="field"><label>名称</label><input id="mName" value="${esc(m.name)}" placeholder="例如：健康运动"></div>
+      <div class="field"><label>颜色</label><input type="color" id="mColor" value="${m.color}"></div>
+      <div class="field"><label>类型</label>
+        <select id="mType">
+          <option value="fixed" ${m.type === 'fixed' ? 'selected' : ''}>固定（每周写死）</option>
+          <option value="manual" ${m.type === 'manual' ? 'selected' : ''}>手动目标（每周可调）</option>
+          <option value="record" ${m.type === 'record' ? 'selected' : ''}>仅记录（不设目标）</option>
+        </select>
+      </div>
+      <div class="field"><label>默认每周目标（小时）</label><input type="number" id="mWeekly" step="0.5" min="0" value="${m.weekly / 60}"></div>
+      <div class="field"><label>父模块（可选，用于二级分类）</label>
+        <select id="mParent">
+          <option value="">（无）</option>
+          ${parents.map(p => `<option value="${p.id}" ${m.parentId === p.id ? 'selected' : ''}>${esc(p.name)}</option>`).join('')}
+        </select>
+      </div>
+      <div class="modal-actions">
+        <button class="btn" id="mCancel">取消</button>
+        <button class="btn primary" id="mSave">保存</button>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(mask);
+
+  const close = () => mask.remove();
+  mask.addEventListener('click', e => { if (e.target === mask) close(); });
+  $('#mCancel', mask).onclick = close;
+  $('#mSave', mask).onclick = () => {
+    const name = $('#mName', mask).value.trim();
+    if (!name) { toast('请填写名称'); return; }
+    m.name = name;
+    m.color = $('#mColor', mask).value;
+    m.type = $('#mType', mask).value;
+    m.weekly = Math.round((parseFloat($('#mWeekly', mask).value) || 0) * 60);
+    m.parentId = $('#mParent', mask).value || null;
+
+    if (isNew) state.modules.push(m);
+    else {
+      const idx = state.modules.findIndex(x => x.id === m.id);
+      state.modules[idx] = m;
+    }
+    save(); close(); toast('已保存'); render();
+  };
+}
+
+/* ==================== 回顾页 ==================== */
+function renderReview(app) {
+  const ws = reviewWeek;
+  const days = getWeekDays(ws);
+  const mods = getWeekModules(ws);
+  const actuals = getWeekActuals(ws);
+
+  const isPast = ws < getWeekStart(todayStr());
+  const typeLabel = { fixed: '固定', manual: '手动', record: '仅记录' };
+
+  let totalTarget = 0, totalActual = 0;
+  const rows = mods.map(m => {
+    const actual = actuals[m.id] || 0;
+    const target = m.target || 0;
+    if (target) totalTarget += target;
+    totalActual += actual;
+    return { ...m, actual, diff: actual - target };
+  });
+
+  const over = rows.filter(r => r.target && r.diff > 0).sort((a, b) => b.diff - a.diff)[0];
+  const under = rows.filter(r => r.target && r.diff < 0).sort((a, b) => a.diff - b.diff)[0];
+
+  const dayTotals = days.map(d => state.entries.filter(e => e.date === d).reduce((s, e) => s + e.duration, 0));
+  const maxDay = Math.max(...dayTotals, 1);
+
+  app.innerHTML = `
+    <div class="section-head">
+      <h2>周回顾</h2>
+      <div class="week-nav">
+        <button class="btn sm" id="prevR">← 上一周</button>
+        <span class="muted">${ws} ~ ${days[6]}${isPast ? '（历史）' : ''}</span>
+        <button class="btn sm" id="nextR">下一周 →</button>
+        <button class="btn sm" id="thisR">本周</button>
+      </div>
+    </div>
+
+    <div class="stats" style="margin-bottom:16px">
+      <div class="stat"><div class="stat-label">目标合计</div><div class="stat-value">${fmtHours(totalTarget)}</div></div>
+      <div class="stat"><div class="stat-label">实际合计</div><div class="stat-value">${fmtHours(totalActual)}</div></div>
+      <div class="stat"><div class="stat-label">超额最多</div><div class="stat-value" style="font-size:16px">${over ? esc(over.name) + ' +' + fmtHours(over.diff) : '—'}</div></div>
+      <div class="stat"><div class="stat-label">缺口最大</div><div class="stat-value" style="font-size:16px">${under ? esc(under.name) + ' ' + fmtHours(under.diff) : '—'}</div></div>
+    </div>
+
+    <div class="card" style="margin-bottom:16px">
+      <div class="card-title">每日记录量（小时）</div>
+      <div style="display:flex;gap:8px;align-items:flex-end;height:120px">
+        ${days.map((d, i) => {
+          const h = dayTotals[i] / 60;
+          const pct = Math.round(dayTotals[i] / maxDay * 100);
+          return `<div style="flex:1;text-align:center">
+            <div style="height:${pct}%;min-height:3px;background:var(--accent);border-radius:6px 6px 0 0;transition:.3s"></div>
+            <div style="font-size:11px;color:var(--dim);margin-top:6px">${d.slice(5)}</div>
+            <div style="font-size:11px;font-weight:600">${h > 0 ? h.toFixed(1) : ''}</div>
+          </div>`;
+        }).join('')}
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">目标 vs 实际</div>
+      <table>
+        <thead><tr><th>模块</th><th>类型</th><th>目标</th><th>实际</th><th>差额</th></tr></thead>
+        <tbody>
+          ${rows.map(r => `
+            <tr>
+              <td><span class="dot" style="display:inline-block;background:${r.color};margin-right:7px"></span>${esc(r.name)}</td>
+              <td><span class="tag">${typeLabel[r.type]}</span></td>
+              <td>${r.target ? fmtHours(r.target) : '—'}</td>
+              <td>${fmtHours(r.actual)}</td>
+              <td>${r.target
+                ? (r.diff >= 0 ? `<span class="ok">+${fmtHours(r.diff)}</span>` : `<span class="bad">${fmtHours(r.diff)}</span>`)
+                : '<span class="muted">—</span>'}</td>
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>
+    </div>
+  `;
+
+  $('#prevR').onclick = () => { reviewWeek = shiftWeek(reviewWeek, -1); render(); };
+  $('#nextR').onclick = () => { reviewWeek = shiftWeek(reviewWeek, 1); render(); };
+  $('#thisR').onclick = () => { reviewWeek = getWeekStart(todayStr()); render(); };
+}
+
+/* ==================== 设置页 ==================== */
+function renderSettings(app) {
+  const s = state.settings;
+
+  app.innerHTML = `
+    <div class="section-head"><h2>设置</h2></div>
+
+    <div class="card" style="margin-bottom:16px">
+      <div class="card-title">基础设置</div>
+      <div class="field"><label>每周起始日</label>
+        <select id="setWeekStart">
+          <option value="1" ${s.weekStart === 1 ? 'selected' : ''}>周一</option>
+          <option value="0" ${s.weekStart === 0 ? 'selected' : ''}>周日</option>
+        </select>
+      </div>
+      <div class="field"><label>最小记录单位</label>
+        <select id="setUnit">
+          <option value="5" ${s.minUnit === 5 ? 'selected' : ''}>5 分钟</option>
+          <option value="15" ${s.minUnit === 15 ? 'selected' : ''}>15 分钟</option>
+          <option value="30" ${s.minUnit === 30 ? 'selected' : ''}>30 分钟</option>
+        </select>
+      </div>
+      <div class="field"><label>主题</label>
+        <select id="setTheme">
+          <option value="light" ${s.theme === 'light' ? 'selected' : ''}>浅色</option>
+          <option value="dark" ${s.theme === 'dark' ? 'selected' : ''}>深色</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="card" style="margin-bottom:16px">
+      <div class="card-title">数据管理</div>
+      <div class="row">
+        <button class="btn" id="exportBtn">导出 JSON</button>
+        <button class="btn" id="importBtn">导入 JSON</button>
+        <input type="file" id="importFile" accept=".json" style="display:none">
+        <button class="btn danger" id="resetBtn">清空所有数据</button>
+      </div>
+      <div class="muted" style="margin-top:12px">
+        数据保存在浏览器本地，登录后自动同步到云端。换设备时，登录同一个账号即可。
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">账号状态</div>
+      <div class="muted" id="accountInfo">
+        ${currentUser ? '已登录：' + esc(currentUser.email) : '未登录（数据仅保存在本机浏览器）'}
+      </div>
+    </div>
+
+    <div class="card" style="margin-top:16px">
+      <div class="card-title">统计</div>
+      <div class="muted">
+        模块数：${state.modules.length} ｜ 记录条数：${state.entries.length} ｜ 周计划数：${Object.keys(state.weekPlans).length}
+      </div>
+    </div>
+  `;
+
+  $('#setWeekStart').onchange = e => { s.weekStart = Number(e.target.value); save(); toast('已保存'); };
+  $('#setUnit').onchange = e => { s.minUnit = Number(e.target.value); save(); toast('已保存'); };
+  $('#setTheme').onchange = e => {
+    s.theme = e.target.value;
+    document.documentElement.dataset.theme = s.theme;
+    save(); toast('已切换');
+    if (currentView === 'dashboard') render();
+  };
+
+  $('#exportBtn').onclick = () => {
+    const blob = new Blob([JSON.stringify(state, null, 2)], { type: 'application/json' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = `life-dashboard-${todayStr()}.json`;
+    a.click();
+    URL.revokeObjectURL(a.href);
+    toast('已导出');
+  };
+
+  $('#importBtn').onclick = () => $('#importFile').click();
+  $('#importFile').onchange = e => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = ev => {
+      try {
+        const data = JSON.parse(ev.target.result);
+        if (!data.modules || !data.entries) throw new Error('格式不对');
+        if (!confirm('导入会覆盖当前所有数据，确定继续？')) return;
+        state = data;
+        state.settings = Object.assign({ weekStart: 1, minUnit: 15, theme: 'light' }, state.settings || {});
+        save();
+        document.documentElement.dataset.theme = state.settings.theme;
+        planWeek = getWeekStart(todayStr());
+        reviewWeek = getWeekStart(todayStr());
+        toast('导入成功');
+        render();
+      } catch (err) {
+        toast('导入失败：' + err.message);
+      }
+    };
+    reader.readAsText(file);
+  };
+
+  $('#resetBtn').onclick = () => {
+    if (!confirm('确定清空所有模块、记录和周计划？此操作不可恢复。')) return;
+    if (!confirm('再确认一次：真的要清空吗？')) return;
+    localStorage.removeItem(STORE_KEY);
+    state = defaultState();
+    save();
+    toast('已清空');
+    render();
+  };
+}
+
+/* ==================== 初始化 ==================== */
+function init() {
+  state = loadState();
+  document.documentElement.dataset.theme = state.settings.theme || 'light';
+
+  planWeek = getWeekStart(todayStr());
+  reviewWeek = getWeekStart(todayStr());
+
+  $('#tabs').addEventListener('click', e => {
+    const btn = e.target.closest('.tab');
+    if (!btn) return;
+    $$('.tab').forEach(t => t.classList.remove('active'));
+    btn.classList.add('active');
+    currentView = btn.dataset.view;
+    render();
+  });
+
+  $('#authBtn').onclick = () => {
+    if (currentUser) {
+      if (!confirm('确定退出登录？')) return;
+      sbClient.auth.signOut().then(() => {
+        toast('已退出');
+      });
+    } else {
+      openAuthModal();
+    }
+  };
+
+  if (sbClient) {
+    sbClient.auth.onAuthStateChange((event, session) => {
+      if (session && session.user) {
+        currentUser = session.user;
+        $('#authStatus').textContent = currentUser.email;
+        $('#authBtn').textContent = '退出登录';
+        syncFromCloud().then(() => render());
+      } else {
+        currentUser = null;
+        $('#authStatus').textContent = '';
+        $('#authBtn').textContent = '登录 / 注册';
+        render();
+      }
+    });
+  }
+
+  render();
+}
+
+init();
+</script>
+</body>
+</html>

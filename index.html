@@ -225,7 +225,6 @@ textarea{width:100%;resize:vertical;min-height:90px;line-height:1.6}
 }
 .day-meta-item{font-size:13px;line-height:1.7;color:var(--dim)}
 .day-meta-item b{color:var(--accent);font-weight:600}
-/* 每日弹窗 */
 .daily-popup-mask{
   position:fixed;inset:0;background:rgba(0,0,0,.55);
   display:flex;align-items:center;justify-content:center;
@@ -657,11 +656,9 @@ const LYRICS = [
   { t: '天公爵微倾 洒下一壶酒', s: '绯村柯北《天命风流》' }
 ];
 
-/* 两个独立池子 */
 const POOL_LYRIC = { list: LYRICS };
 const POOL_QUOTE = { list: [...SU_SHI, ...QUOTES] };
 
-/* 从池子随机抽一条不重复 */
 function drawFromPool(poolType, usedKeys) {
   let baseList;
   if (poolType === 'lyric') {
@@ -677,7 +674,6 @@ function drawFromPool(poolType, usedKeys) {
     if (!usedKeys.has(k)) candidates.push({ idx: i, key: k, ...baseList[i] });
   }
   if (!candidates.length) {
-    // 全部用过，重置（返回全池随机）
     const all = baseList.map((item, i) => ({ idx: i, key: poolType + ':' + i, ...item }));
     if (!all.length) return null;
     return all[Math.floor(Math.random() * all.length)];
@@ -781,8 +777,8 @@ function defaultState() {
     daySchedules: {},
     logs: {},
     entries: [],
-    dailyLyric: {},   // { "2026-10-11": { text, source } }
-    dailyQuote: {},   // { "2026-10-11": { text, source } }
+    dailyLyric: {},
+    dailyQuote: {},
     customPool: { lyric: [], quote: [] }
   };
 }
@@ -809,7 +805,6 @@ function loadState() {
       s.customPool = s.customPool || { lyric: [], quote: [] };
       if (!Array.isArray(s.customPool.lyric)) s.customPool.lyric = [];
       if (!Array.isArray(s.customPool.quote)) s.customPool.quote = [];
-      // 清理旧数据
       delete s.songs;
       delete s.songList;
       delete s.dailySongs;
@@ -1001,6 +996,31 @@ async function syncToCloud() {
       const { error } = await sbClient.from('daily_logs').upsert(payload);
       if (error) console.error('同步日志失败', error);
     }
+
+    // 【新增】同步每日内容（歌词 + 一句）
+    const allDates = new Set([
+      ...Object.keys(state.dailyLyric || {}),
+      ...Object.keys(state.dailyQuote || {})
+    ]);
+    if (allDates.size) {
+      const payload = [...allDates].map(d => {
+        const l = (state.dailyLyric || {})[d] || {};
+        const q = (state.dailyQuote || {})[d] || {};
+        return {
+          id: d,
+          user_id: currentUser.id,
+          date: d,
+          lyric_text: l.text || '',
+          lyric_source: l.source || '',
+          quote_text: q.text || '',
+          quote_source: q.source || '',
+          updated_at: new Date().toISOString()
+        };
+      });
+      const { error } = await sbClient.from('daily_contents').upsert(payload);
+      if (error) console.error('同步每日内容失败', error);
+    }
+
     console.log('☁️ 云端同步完成');
   } catch (err) {
     console.error('同步异常', err);
@@ -1014,9 +1034,11 @@ async function syncFromCloud() {
     const { data: ce } = await sbClient.from('entries').select('*');
     const { data: cdp } = await sbClient.from('day_plans').select('*');
     const { data: cl } = await sbClient.from('daily_logs').select('*');
+    const { data: cdc } = await sbClient.from('daily_contents').select('*');
 
     const cloudEmpty = (!cm || cm.length === 0) && (!ce || ce.length === 0)
-                    && (!cdp || cdp.length === 0) && (!cl || cl.length === 0);
+                    && (!cdp || cdp.length === 0) && (!cl || cl.length === 0)
+                    && (!cdc || cdc.length === 0);
 
     if (cloudEmpty) {
       await syncToCloud();
@@ -1045,6 +1067,27 @@ async function syncFromCloud() {
       state.logs = {};
       cl.forEach(item => { state.logs[item.date] = item.content || ''; });
     }
+
+    // 【新增】拉取每日内容（歌词 + 一句）
+    if (cdc && cdc.length) {
+      if (!state.dailyLyric) state.dailyLyric = {};
+      if (!state.dailyQuote) state.dailyQuote = {};
+      cdc.forEach(item => {
+        if (item.lyric_text) {
+          state.dailyLyric[item.date] = {
+            text: item.lyric_text,
+            source: item.lyric_source || ''
+          };
+        }
+        if (item.quote_text) {
+          state.dailyQuote[item.date] = {
+            text: item.quote_text,
+            source: item.quote_source || ''
+          };
+        }
+      });
+    }
+
     save();
     render();
     console.log('☁️ 云端数据已拉取并覆盖本地');
@@ -1067,6 +1110,7 @@ async function clearCloud() {
     await sbClient.from('entries').delete().eq('user_id', currentUser.id);
     await sbClient.from('day_plans').delete().eq('user_id', currentUser.id);
     await sbClient.from('daily_logs').delete().eq('user_id', currentUser.id);
+    await sbClient.from('daily_contents').delete().eq('user_id', currentUser.id);
   } catch (e) { console.error('清空云端失败', e); }
 }
 
@@ -2526,7 +2570,7 @@ function init() {
 
   applyAppearance();
 
-  // 每日抽取
+  // 每日抽取（登录状态下会先抽后云同步覆盖）
   ensureTodayLyric();
   ensureTodayQuote();
 

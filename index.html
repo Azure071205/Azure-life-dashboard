@@ -80,7 +80,6 @@ body::before{
 }
 .menu-auth .btn{width:100%;text-align:center;padding:7px 12px;font-size:12.5px}
 main{max-width:1180px;margin:0 auto;padding:16px 14px 60px}
-body.has-player main{padding-bottom:100px}
 .section-head{display:flex;align-items:baseline;justify-content:space-between;margin:22px 0 12px;flex-wrap:wrap;gap:8px}
 .section-head h2{font-size:18px}
 .section-head h3{font-size:15px}
@@ -122,6 +121,7 @@ textarea{width:100%;resize:vertical;min-height:90px;line-height:1.6}
 .btn{
   font-family:inherit;font-size:13px;padding:8px 15px;border-radius:9px;border:1px solid var(--border);
   background:rgb(var(--card-rgb) / var(--card-alpha));color:var(--text);cursor:pointer;transition:.15s;
+  text-decoration:none;display:inline-flex;align-items:center;gap:4px;
 }
 .btn:hover{border-color:var(--accent);color:var(--accent)}
 .btn.primary{background:var(--accent);color:#fff;border-color:var(--accent)}
@@ -181,31 +181,6 @@ textarea{width:100%;resize:vertical;min-height:90px;line-height:1.6}
 }
 .swatch:hover{transform:scale(1.08)}
 .swatch:active{transform:scale(.94)}
-.mini-player{
-  position:fixed;bottom:0;left:0;right:0;z-index:80;
-  display:none;align-items:center;justify-content:space-between;gap:10px;
-  padding:9px 16px;
-  background:rgb(var(--panel-rgb) / 0.96);
-  border-top:1px solid var(--border);
-  backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);
-}
-.mini-info{flex:1;min-width:0;display:flex;align-items:center;gap:8px}
-.mini-icon{font-size:14px;flex:0 0 auto}
-.mini-title{font-size:13px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.mini-controls{display:flex;gap:8px;align-items:center}
-.mini-btn{
-  width:34px;height:34px;border-radius:50%;
-  border:none;background:var(--accent);color:#fff;font-size:14px;
-  cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0;flex:0 0 auto;
-}
-.mini-btn:hover{opacity:.88}
-.mini-btn.ghost{background:transparent;color:var(--text);border:1px solid var(--border)}
-.mini-btn.ghost:hover{border-color:var(--accent);color:var(--accent)}
-.tip-box{
-  padding:10px 12px;background:var(--accent-soft);border-radius:10px;
-  font-size:12px;line-height:1.7;color:var(--text);
-}
-.tip-box b{color:var(--accent)}
 .sched-entry{
   display:flex;align-items:center;gap:10px;
   background:rgb(var(--card-rgb) / var(--card-alpha));
@@ -217,6 +192,45 @@ textarea{width:100%;resize:vertical;min-height:90px;line-height:1.6}
 .sched-bar > div{height:100%;border-radius:99px}
 .sched-name{font-weight:600;font-size:13px;min-width:80px}
 .sched-dur{font-size:12px;color:var(--dim);font-variant-numeric:tabular-nums}
+.tip-box{
+  padding:10px 12px;background:var(--accent-soft);border-radius:10px;
+  font-size:12px;line-height:1.7;color:var(--text);
+}
+.tip-box b{color:var(--accent)}
+.daily-card{
+  background:rgb(var(--card-rgb) / var(--card-alpha));
+  border:1px solid var(--border);border-radius:var(--radius);
+  padding:24px;margin-bottom:16px;
+  position:relative;overflow:hidden;
+}
+.daily-card::before{
+  content:'';position:absolute;top:0;left:0;right:0;height:3px;
+  background:linear-gradient(90deg,var(--accent),#8b5cf6);
+}
+.daily-label{
+  font-size:11px;color:var(--dim);letter-spacing:.5px;
+  margin-bottom:12px;font-weight:600;
+}
+.daily-song{
+  font-size:24px;font-weight:700;line-height:1.4;
+  color:var(--text);cursor:pointer;transition:.2s;
+  display:inline-block;
+}
+.daily-song:hover{color:var(--accent)}
+.daily-song-actions{margin-top:12px;display:flex;gap:8px;flex-wrap:wrap}
+.daily-quote{
+  font-size:17px;line-height:1.9;color:var(--text);
+  white-space:pre-wrap;margin-bottom:14px;
+}
+.daily-source{
+  font-size:13px;color:var(--dim);text-align:right;
+}
+.day-meta{
+  margin-top:12px;padding-top:12px;border-top:1px dashed var(--border);
+  display:flex;flex-direction:column;gap:6px;
+}
+.day-meta-item{font-size:13px;line-height:1.7;color:var(--dim)}
+.day-meta-item b{color:var(--accent);font-weight:600}
 </style>
 </head>
 <body>
@@ -236,7 +250,7 @@ textarea{width:100%;resize:vertical;min-height:90px;line-height:1.6}
     <button class="tab" data-view="plan">计划</button>
     <button class="tab" data-view="modules">模块</button>
     <button class="tab" data-view="review">回顾</button>
-    <button class="tab" data-view="music">音乐</button>
+    <button class="tab" data-view="daily">每日</button>
     <button class="tab" data-view="settings">设置</button>
     <div class="menu-divider"></div>
     <div class="menu-auth">
@@ -247,19 +261,6 @@ textarea{width:100%;resize:vertical;min-height:90px;line-height:1.6}
 </header>
 
 <main id="app"></main>
-
-<div class="mini-player" id="miniPlayer">
-  <div class="mini-info" id="miniInfo">
-    <span class="mini-icon">🎵</span>
-    <span class="mini-title" id="miniTitle">—</span>
-  </div>
-  <div class="mini-controls">
-    <button class="mini-btn ghost" id="miniRandom" title="换一首">🎲</button>
-    <button class="mini-btn" id="miniPlay">▶</button>
-  </div>
-</div>
-
-<audio id="audioEl" style="display:none"></audio>
 <div class="toast" id="toast"></div>
 
 <script>
@@ -276,6 +277,365 @@ try {
     sbClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
   }
 } catch (e) { console.error('Supabase 初始化失败', e); }
+
+/* ==================== 内容池数据 ==================== */
+
+/* --- 苏轼作品（105 条） --- */
+const SU_SHI = [
+  { t: '竹杖芒鞋轻胜马，谁怕？一蓑烟雨任平生。', s: '《定风波·莫听穿林打叶声》' },
+  { t: '回首向来萧瑟处，归去，也无风雨也无晴。', s: '《定风波·莫听穿林打叶声》' },
+  { t: '莫听穿林打叶声，何妨吟啸且徐行。', s: '《定风波·莫听穿林打叶声》' },
+  { t: '料峭春风吹酒醒，微冷，山头斜照却相迎。', s: '《定风波·莫听穿林打叶声》' },
+  { t: '人生如逆旅，我亦是行人。', s: '《临江仙·送钱穆父》' },
+  { t: '一别都门三改火，天涯踏尽红尘。', s: '《临江仙·送钱穆父》' },
+  { t: '尊前不用翠眉颦。', s: '《临江仙·送钱穆父》' },
+  { t: '惆怅孤帆连夜发，送行淡月微云。', s: '《临江仙·送钱穆父》' },
+  { t: '但愿人长久，千里共婵娟。', s: '《水调歌头·明月几时有》' },
+  { t: '人有悲欢离合，月有阴晴圆缺，此事古难全。', s: '《水调歌头·明月几时有》' },
+  { t: '明月几时有，把酒问青天。', s: '《水调歌头·明月几时有》' },
+  { t: '我欲乘风归去，又恐琼楼玉宇，高处不胜寒。', s: '《水调歌头·明月几时有》' },
+  { t: '起舞弄清影，何似在人间。', s: '《水调歌头·明月几时有》' },
+  { t: '转朱阁，低绮户，照无眠。', s: '《水调歌头·明月几时有》' },
+  { t: '不应有恨，何事长向别时圆。', s: '《水调歌头·明月几时有》' },
+  { t: '大江东去，浪淘尽，千古风流人物。', s: '《念奴娇·赤壁怀古》' },
+  { t: '乱石穿空，惊涛拍岸，卷起千堆雪。', s: '《念奴娇·赤壁怀古》' },
+  { t: '江山如画，一时多少豪杰。', s: '《念奴娇·赤壁怀古》' },
+  { t: '遥想公瑾当年，小乔初嫁了，雄姿英发。', s: '《念奴娇·赤壁怀古》' },
+  { t: '羽扇纶巾，谈笑间、樯橹灰飞烟灭。', s: '《念奴娇·赤壁怀古》' },
+  { t: '人生如梦，一尊还酹江月。', s: '《念奴娇·赤壁怀古》' },
+  { t: '十年生死两茫茫，不思量，自难忘。', s: '《江城子·乙卯正月二十日夜记梦》' },
+  { t: '千里孤坟，无处话凄凉。', s: '《江城子·乙卯正月二十日夜记梦》' },
+  { t: '纵使相逢应不识，尘满面，鬓如霜。', s: '《江城子·乙卯正月二十日夜记梦》' },
+  { t: '夜来幽梦忽还乡，小轩窗，正梳妆。', s: '《江城子·乙卯正月二十日夜记梦》' },
+  { t: '相顾无言，惟有泪千行。', s: '《江城子·乙卯正月二十日夜记梦》' },
+  { t: '料得年年肠断处，明月夜，短松冈。', s: '《江城子·乙卯正月二十日夜记梦》' },
+  { t: '老夫聊发少年狂，左牵黄，右擎苍。', s: '《江城子·密州出猎》' },
+  { t: '酒酣胸胆尚开张，鬓微霜，又何妨。', s: '《江城子·密州出猎》' },
+  { t: '会挽雕弓如满月，西北望，射天狼。', s: '《江城子·密州出猎》' },
+  { t: '持节云中，何日遣冯唐。', s: '《江城子·密州出猎》' },
+  { t: '花褪残红青杏小。燕子飞时，绿水人家绕。', s: '《蝶恋花·春景》' },
+  { t: '枝上柳绵吹又少，天涯何处无芳草。', s: '《蝶恋花·春景》' },
+  { t: '墙里秋千墙外道。墙外行人，墙里佳人笑。', s: '《蝶恋花·春景》' },
+  { t: '笑渐不闻声渐悄，多情却被无情恼。', s: '《蝶恋花·春景》' },
+  { t: '谁道人生无再少？门前流水尚能西。', s: '《浣溪沙·游蕲水清泉寺》' },
+  { t: '休将白发唱黄鸡。', s: '《浣溪沙·游蕲水清泉寺》' },
+  { t: '山下兰芽短浸溪，松间沙路净无泥。', s: '《浣溪沙·游蕲水清泉寺》' },
+  { t: '横看成岭侧成峰，远近高低各不同。', s: '《题西林壁》' },
+  { t: '不识庐山真面目，只缘身在此山中。', s: '《题西林壁》' },
+  { t: '水光潋滟晴方好，山色空蒙雨亦奇。', s: '《饮湖上初晴后雨》' },
+  { t: '欲把西湖比西子，淡妆浓抹总相宜。', s: '《饮湖上初晴后雨》' },
+  { t: '荷尽已无擎雨盖，菊残犹有傲霜枝。', s: '《赠刘景文》' },
+  { t: '一年好景君须记，最是橙黄橘绿时。', s: '《赠刘景文》' },
+  { t: '人生到处知何似，应似飞鸿踏雪泥。', s: '《和子由渑池怀旧》' },
+  { t: '泥上偶然留指爪，鸿飞那复计东西。', s: '《和子由渑池怀旧》' },
+  { t: '老僧已死成新塔，坏壁无由见旧题。', s: '《和子由渑池怀旧》' },
+  { t: '往日崎岖还记否，路长人困蹇驴嘶。', s: '《和子由渑池怀旧》' },
+  { t: '拣尽寒枝不肯栖，寂寞沙洲冷。', s: '《卜算子·黄州定慧院寓居作》' },
+  { t: '缺月挂疏桐，漏断人初静。', s: '《卜算子·黄州定慧院寓居作》' },
+  { t: '谁见幽人独往来，缥缈孤鸿影。', s: '《卜算子·黄州定慧院寓居作》' },
+  { t: '惊起却回头，有恨无人省。', s: '《卜算子·黄州定慧院寓居作》' },
+  { t: '小舟从此逝，江海寄余生。', s: '《临江仙·夜饮东坡醒复醉》' },
+  { t: '长恨此身非我有，何时忘却营营。', s: '《临江仙·夜饮东坡醒复醉》' },
+  { t: '夜阑风静縠纹平。', s: '《临江仙·夜饮东坡醒复醉》' },
+  { t: '夜饮东坡醒复醉，归来仿佛三更。', s: '《临江仙·夜饮东坡醒复醉》' },
+  { t: '家童鼻息已雷鸣，敲门都不应，倚杖听江声。', s: '《临江仙·夜饮东坡醒复醉》' },
+  { t: '惆怅东栏一株雪，人生看得几清明。', s: '《东栏梨花》' },
+  { t: '梨花淡白柳深青，柳絮飞时花满城。', s: '《东栏梨花》' },
+  { t: '春宵一刻值千金，花有清香月有阴。', s: '《春宵》' },
+  { t: '歌管楼台声细细，秋千院落夜沉沉。', s: '《春宵》' },
+  { t: '人皆养子望聪明，我被聪明误一生。', s: '《洗儿戏作》' },
+  { t: '但愿孩儿愚且鲁，无灾无难到公卿。', s: '《洗儿戏作》' },
+  { t: '宁可食无肉，不可居无竹。', s: '《於潜僧绿筠轩》' },
+  { t: '无肉令人瘦，无竹令人俗。', s: '《於潜僧绿筠轩》' },
+  { t: '人瘦尚可肥，士俗不可医。', s: '《於潜僧绿筠轩》' },
+  { t: '粗缯大布裹生涯，腹有诗书气自华。', s: '《和董传留别》' },
+  { t: '人似秋鸿来有信，事如春梦了无痕。', s: '《正月二十日与潘郭二生出郊寻春》' },
+  { t: '人生识字忧患始。', s: '《石苍舒醉墨堂》' },
+  { t: '我书意造本无法，点画信手烦推求。', s: '《石苍舒醉墨堂》' },
+  { t: '竹外桃花三两枝，春江水暖鸭先知。', s: '《惠崇春江晚景》' },
+  { t: '蒌蒿满地芦芽短，正是河豚欲上时。', s: '《惠崇春江晚景》' },
+  { t: '试问岭南应不好，却道：此心安处是吾乡。', s: '《定风波·南海归赠王定国侍人寓娘》' },
+  { t: '万里归来颜愈少，微笑，笑时犹带岭梅香。', s: '《定风波·南海归赠王定国侍人寓娘》' },
+  { t: '休对故人思故国，且将新火试新茶。诗酒趁年华。', s: '《望江南·超然台作》' },
+  { t: '春未老，风细柳斜斜。', s: '《望江南·超然台作》' },
+  { t: '半壕春水一城花。', s: '《望江南·超然台作》' },
+  { t: '烟雨暗千家。', s: '《望江南·超然台作》' },
+  { t: '浮名浮利，虚苦劳神。', s: '《行香子·述怀》' },
+  { t: '且陶陶、乐尽天真。', s: '《行香子·述怀》' },
+  { t: '几时归去，作个闲人。对一张琴，一壶酒，一溪云。', s: '《行香子·述怀》' },
+  { t: '虽抱文章，开口谁亲。', s: '《行香子·述怀》' },
+  { t: '清夜无尘，月色如银。', s: '《行香子·述怀》' },
+  { t: '酒斟时、须满十分。', s: '《行香子·述怀》' },
+  { t: '何夜无月？何处无竹柏？但少闲人如吾两人者耳。', s: '《记承天寺夜游》' },
+  { t: '庭下如积水空明，水中藻、荇交横，盖竹柏影也。', s: '《记承天寺夜游》' },
+  { t: '元丰六年十月十二日夜，解衣欲睡，月色入户，欣然起行。', s: '《记承天寺夜游》' },
+  { t: '寄蜉蝣于天地，渺沧海之一粟。', s: '《前赤壁赋》' },
+  { t: '哀吾生之须臾，羡长江之无穷。', s: '《前赤壁赋》' },
+  { t: '挟飞仙以遨游，抱明月而长终。', s: '《前赤壁赋》' },
+  { t: '逝者如斯，而未尝往也；盈虚者如彼，而卒莫消长也。', s: '《前赤壁赋》' },
+  { t: '自其变者而观之，则天地曾不能以一瞬。', s: '《前赤壁赋》' },
+  { t: '自其不变者而观之，则物与我皆无尽也。', s: '《前赤壁赋》' },
+  { t: '惟江上之清风，与山间之明月，耳得之而为声，目遇之而成色。', s: '《前赤壁赋》' },
+  { t: '取之无禁，用之不竭。', s: '《前赤壁赋》' },
+  { t: '清风徐来，水波不兴。', s: '《前赤壁赋》' },
+  { t: '白露横江，水光接天。', s: '《前赤壁赋》' },
+  { t: '纵一苇之所如，凌万顷之茫然。', s: '《前赤壁赋》' },
+  { t: '浩浩乎如冯虚御风，而不知其所止。', s: '《前赤壁赋》' },
+  { t: '飘飘乎如遗世独立，羽化而登仙。', s: '《前赤壁赋》' },
+  { t: '博观而约取，厚积而薄发。', s: '《稼说送张琥》' },
+  { t: '古之立大事者，不惟有超世之才，亦必有坚忍不拔之志。', s: '《晁错论》' },
+  { t: '一点浩然气，千里快哉风。', s: '《水调歌头·黄州快哉亭赠张偓佺》' },
+  { t: '万事到头都是梦，休嗟百计不如人。', s: '《南乡子·重九涵辉楼呈徐君猷》' },
+  { t: '明日黄花蝶也愁。', s: '《南乡子·重九涵辉楼呈徐君猷》' },
+  { t: '休言万事转头空，未转头时皆梦。', s: '《西江月·平山堂》' }
+];
+
+/* --- INTP 名言（120 条） --- */
+const QUOTES = [
+  { t: '我唯一知道的就是我一无所知。', s: '苏格拉底' },
+  { t: '未经审视的人生不值得过。', s: '苏格拉底' },
+  { t: '认识你自己。', s: '德尔斐神庙箴言' },
+  { t: '人是万物的尺度。', s: '普罗泰戈拉' },
+  { t: '吾爱吾师，吾更爱真理。', s: '亚里士多德' },
+  { t: '人不能两次踏进同一条河流。', s: '赫拉克利特' },
+  { t: '我们反复做的事情造就了我们。', s: '亚里士多德' },
+  { t: '一个人的性格就是他的命运。', s: '赫拉克利特' },
+  { t: '万物流变，无物常驻。', s: '赫拉克利特' },
+  { t: '有两样东西，我思考得越久，就越充满敬畏：头顶的星空和心中的道德律。', s: '康德' },
+  { t: '要有勇气运用你自己的理智！', s: '康德' },
+  { t: '人是目的，不是手段。', s: '康德' },
+  { t: '与恶龙缠斗过久，自身亦成为恶龙；凝视深渊过久，深渊将回以凝视。', s: '尼采' },
+  { t: '那些杀不死我的，使我更强大。', s: '尼采' },
+  { t: '每一个不曾起舞的日子，都是对生命的辜负。', s: '尼采' },
+  { t: '一个人知道自己为什么而活，就可以忍受任何一种生活。', s: '尼采' },
+  { t: '世界是我的表象。', s: '叔本华' },
+  { t: '人生实如钟摆，在痛苦与无聊之间摆动。', s: '叔本华' },
+  { t: '一个人只有在独处时才能成为自己。', s: '叔本华' },
+  { t: '人是被抛入这个世界的。', s: '海德格尔' },
+  { t: '向死而生。', s: '海德格尔' },
+  { t: '语言是存在之家。', s: '海德格尔' },
+  { t: '我思故我在。', s: '笛卡尔' },
+  { t: '人是一根会思想的苇草。', s: '帕斯卡尔' },
+  { t: '我们必须想象西西弗是幸福的。', s: '加缪' },
+  { t: '在隆冬，我终于知道，我身上有一个不可战胜的夏天。', s: '加缪' },
+  { t: '自由即选择，选择即责任。', s: '萨特' },
+  { t: '他人即地狱。', s: '萨特' },
+  { t: '存在先于本质。', s: '萨特' },
+  { t: '人是被判定为自由的。', s: '萨特' },
+  { t: '生活在别处。', s: '兰波' },
+  { t: '凡不可说的，应当沉默。', s: '维特根斯坦' },
+  { t: '我的语言的界限意味着我的世界的界限。', s: '维特根斯坦' },
+  { t: '参差多态乃是幸福的本源。', s: '罗素' },
+  { t: '对爱情的渴望，对知识的追求，对人类苦难不可遏制的同情，是支配我一生的三种感情。', s: '罗素' },
+  { t: '存在就是被感知。', s: '贝克莱' },
+  { t: '人生而自由，却无往不在枷锁之中。', s: '卢梭' },
+  { t: '一个人越是有许多事情能够放得下，他就越是富有。', s: '梭罗' },
+  { t: '大部分人都生活在平静的绝望中。', s: '梭罗' },
+  { t: '我步入丛林，因为我希望生活得有意义。', s: '梭罗' },
+  { t: '我宁愿坐在南瓜上，也不愿挤在天鹅绒的垫子上。', s: '梭罗' },
+  { t: '吾生也有涯，而知也无涯。', s: '庄子' },
+  { t: '天地与我并生，而万物与我为一。', s: '庄子' },
+  { t: '相濡以沫，不如相忘于江湖。', s: '庄子' },
+  { t: '井蛙不可以语于海者，拘于虚也。', s: '庄子' },
+  { t: '至人无己，神人无功，圣人无名。', s: '庄子' },
+  { t: '独与天地精神往来。', s: '庄子' },
+  { t: '上善若水，水善利万物而不争。', s: '老子' },
+  { t: '知人者智，自知者明。', s: '老子' },
+  { t: '大巧若拙，大辩若讷。', s: '老子' },
+  { t: '祸兮福之所倚，福兮祸之所伏。', s: '老子' },
+  { t: '千里之行，始于足下。', s: '老子' },
+  { t: '天地不仁，以万物为刍狗。', s: '老子' },
+  { t: '大方无隅，大器晚成，大音希声，大象无形。', s: '老子' },
+  { t: '天下之至柔，驰骋天下之至坚。', s: '老子' },
+  { t: '反者道之动。', s: '老子' },
+  { t: '知行合一。', s: '王阳明' },
+  { t: '心外无物。', s: '王阳明' },
+  { t: '破山中贼易，破心中贼难。', s: '王阳明' },
+  { t: '此心光明，亦复何言。', s: '王阳明' },
+  { t: '未知生，焉知死。', s: '孔子' },
+  { t: '君子和而不同，小人同而不和。', s: '孔子' },
+  { t: '学而不思则罔，思而不学则殆。', s: '孔子' },
+  { t: '己所不欲，勿施于人。', s: '孔子' },
+  { t: '三人行，必有我师焉。', s: '孔子' },
+  { t: '朝闻道，夕死可矣。', s: '孔子' },
+  { t: '控制你能控制的，接受你不能控制的。', s: '爱比克泰德' },
+  { t: '让我们痛苦的不是事情本身，而是我们对事情的看法。', s: '爱比克泰德' },
+  { t: '你有权支配你的心灵，而不是外部事件。', s: '马可·奥勒留' },
+  { t: '我们听到的一切都是一个观点，不是事实；我们看到的一切都是一个视角，不是真相。', s: '马可·奥勒留' },
+  { t: '幸福的生活不是外在的，而是内在的。', s: '塞涅卡' },
+  { t: '当我们说时间不够时，其实是时间没有被好好利用。', s: '塞涅卡' },
+  { t: '从前的日色变得慢，车、马、邮件都慢，一生只够爱一个人。', s: '木心' },
+  { t: '岁月不饶人，我亦未曾饶过岁月。', s: '木心' },
+  { t: '生命好在无意义，才容得下各自赋予意义。', s: '木心' },
+  { t: '我之为我，只在异人处。', s: '木心' },
+  { t: '不知原谅什么，诚觉世事尽可原谅。', s: '木心' },
+  { t: '人的一切痛苦，本质上都是对自己无能的愤怒。', s: '王小波' },
+  { t: '那一天我二十一岁，在我一生的黄金时代，我有好多奢望。', s: '王小波' },
+  { t: '深思熟虑的结果往往就是说不清楚。', s: '王小波' },
+  { t: '一个人只拥有此生此世是不够的，他还应该拥有诗意的世界。', s: '王小波' },
+  { t: '我活在世上，无非想要明白些道理，遇见些有趣的事。', s: '王小波' },
+  { t: '我一直暗暗设想，天堂应是图书馆的模样。', s: '博尔赫斯' },
+  { t: '时间永远分岔，通向无数的未来。', s: '博尔赫斯' },
+  { t: '我们需要的书，应该是一把能击破我们心中冰海的利斧。', s: '卡夫卡' },
+  { t: '你不需要离开房间，只需要坐在桌前倾听。', s: '卡夫卡' },
+  { t: '世界上只有一种真正的英雄主义，那就是在认清生活的真相后依然热爱生活。', s: '罗曼·罗兰' },
+  { t: '想象力比知识更重要。', s: '爱因斯坦' },
+  { t: '提出一个问题往往比解决一个问题更重要。', s: '爱因斯坦' },
+  { t: '我从不想未来，因为它来得够快。', s: '爱因斯坦' },
+  { t: '凡是你不能创造的，你就还没有理解。', s: '费曼' },
+  { t: '我宁愿要无法回答的问题，也不要无法质疑的答案。', s: '费曼' },
+  { t: '万物皆有裂痕，那是光照进来的地方。', s: '莱昂纳德·科恩' },
+  { t: '向外看的人做梦，向内看的人觉醒。', s: '荣格' },
+  { t: '你的潜意识正引导着你的人生，而你称其为命运。', s: '荣格' },
+  { t: '横眉冷对千夫指，俯首甘为孺子牛。', s: '鲁迅' },
+  { t: '真的猛士，敢于直面惨淡的人生。', s: '鲁迅' },
+  { t: '从来如此，便对么？', s: '鲁迅' },
+  { t: '我自横刀向天笑，去留肝胆两昆仑。', s: '谭嗣同' },
+  { t: '我们都在阴沟里，但仍有人仰望星空。', s: '王尔德' },
+  { t: '做你自己，因为别人已经有人做了。', s: '王尔德' },
+  { t: '走自己的路，让别人去说吧。', s: '但丁' },
+  { t: '我心里有猛虎，在细嗅蔷薇。', s: '西格里夫·萨松' },
+  { t: '人生只能倒着被理解，但必须正着被经历。', s: '克尔凯郭尔' },
+  { t: '自由是一种负担，一种责任，一种焦虑。', s: '克尔凯郭尔' },
+  { t: '知识就是力量。', s: '培根' },
+  { t: '读史使人明智，读诗使人灵秀，数学使人周密，哲学使人深刻。', s: '培根' },
+  { t: '人是被判定为自由的，因为一旦被抛入这个世界，他就要为自己所做的一切负责。', s: '萨特' },
+  { t: '人生的意义不在于活得长，而在于活得深。', s: '梭罗' },
+  { t: '一切伟大的思想和行动，都有一个微不足道的开始。', s: '加缪' },
+  { t: '逻辑是思想的道德。', s: '维特根斯坦' },
+  { t: '凡真实的人生皆是相遇。', s: '马丁·布伯' },
+  { t: '重要的不是治愈，而是带着病痛活下去。', s: '加缪' },
+  { t: '人真正的完美不在于他拥有什么，而在于他是什么。', s: '王尔德' },
+  { t: '生活中最重要的不是所站的位置，而是所朝的方向。', s: '霍姆斯' },
+  { t: '我们都是阴沟里的虫子，但总还是得有人仰望星空。', s: '王尔德' }
+];
+
+/* --- 古风歌词（100 条） --- */
+const LYRICS = [
+  { t: '覆了天下也罢，始终不过一场繁华', s: '河图《倾尽天下》' },
+  { t: '明月照亮天涯，最后谁又得到了蒹葭', s: '河图《倾尽天下》' },
+  { t: '直到山雨欲来风起于一夜间，我仍在看云霞舒卷', s: '河图《烈火青莲》' },
+  { t: '顿悟在川流不息最葱茏的流年，与春风惊鸿一面', s: '河图《烈火青莲》' },
+  { t: '他还演着那场郎骑竹马来的戏', s: '河图《第三十八年夏至》' },
+  { t: '衰草连横向晚晴，半城柳色半声笛', s: '河图《第三十八年夏至》' },
+  { t: '点一盏灯，听一夜孤笛声，等一个人等得流年三四轮', s: '河图《华胥引》' },
+  { t: '谁在哭啊哭伤了城墙，谁在笑啊触目的苍凉', s: '河图《伶仃谣》' },
+  { t: '雨落隔岸，河过忘川，沉默的船家你渡谁过江', s: '河图《伶仃谣》' },
+  { t: '你是我身外，化白云任去来，推开孤城万里，吹渡春风几千载', s: '银临/河图《是风动》' },
+  { t: '这世间，圆月常有，月圆难留', s: '河图《青山有剑》' },
+  { t: '我曾奔赴远山林莽间，焚风冻土的荒原，流矢如星，热血如焰', s: '河图《终不还》' },
+  { t: '我簪花问酒，哪肯臣服于春秋', s: '河图《终不还》' },
+  { t: '当白露遗忘昨日蒹葭，当明镜磨平了旧岁伤疤', s: '河图《惘然记》' },
+  { t: '当孤村作客点点寒鸦，这古来传奇太多飞蛾扑火', s: '河图《惘然记》' },
+  { t: '唱别久悲不成悲，十分红处竟成灰', s: '银临/Aki阿杰《牵丝戏》' },
+  { t: '灯火葳蕤，揉皱你眼眉', s: '银临/Aki阿杰《牵丝戏》' },
+  { t: '你憔悴，我替你明媚', s: '银临/Aki阿杰《牵丝戏》' },
+  { t: '如果来生太远寄不到诺言，不如学着放下许多执念', s: '银临/云之泣《锦鲤抄》' },
+  { t: '老去的当年，水色天边，有谁将悲欢收殓', s: '银临/云之泣《锦鲤抄》' },
+  { t: '问谁淡忘了经年旧梦，谁又守住了地老天荒', s: '银临/云之泣《锦鲤抄》' },
+  { t: '似有故人轻叩，再将棠梨煎雪', s: '银临《棠梨煎雪》' },
+  { t: '能否消得你一路而来的半生风雪', s: '银临《棠梨煎雪》' },
+  { t: '于青萍之末，风露更婆娑', s: '银临《腐草为萤》' },
+  { t: '于盛夏之末，入夜仍灼热，又一场离合开始凄恻', s: '银临《腐草为萤》' },
+  { t: '于万人中万幸得以相逢，刹那间澈净明通', s: '银临《不老梦》' },
+  { t: '成为我所向披靡的勇气和惶恐，裂山海，堕苍穹', s: '银临《不老梦》' },
+  { t: '蝉翼蜗角，只浪迹一秒，谁不是寄石火中粼粼映照', s: '银临《粼粼》' },
+  { t: '有谁不曾期冀投身远方，每段荡气回肠', s: '银临《珍珠》' },
+  { t: '少年成为他想要的模样，就是岁月最好奖赏', s: '银临《珍珠》' },
+  { t: '月亮坠入 剔透的 寂静的 平生无从再遇的琉璃', s: '银临《琉璃》' },
+  { t: '月亮坠入 盛大的 温柔的 远山云树晚籁的怀里', s: '银临《琉璃》' },
+  { t: '看千山，扑空，道道门扉', s: '银临《少女庄周》' },
+  { t: '看沧海，停泊，一地覆水', s: '银临《少女庄周》' },
+  { t: '看人间，走散，爱憎相会', s: '银临《少女庄周》' },
+  { t: '仿若蝴蝶遗忘错和对，依然追寻你呼吸香味', s: '银临《少女庄周》' },
+  { t: '天衢长星遥引 瞰世人从生到死到尘烬', s: '银临/司南《天和山雨雪》' },
+  { t: '细雪如漫天轻鳞 云游红颜白发无声亦无垠', s: '银临/司南《天和山雨雪》' },
+  { t: '山雨滂沱晚来频 霜风最喜万物凛', s: '银临/司南《天和山雨雪》' },
+  { t: '千丈晴光捉云尾 接天草色似春追', s: '银临/司南《天和山雨雪》' },
+  { t: '大漠黄沙暮色染黄昏，故城楼眺望远方的那个人', s: '李常超《长安姑娘》' },
+  { t: '红尘来去散无痕，醉酒当歌思故人', s: '李常超《长安姑娘》' },
+  { t: '成全过你我张狂，海上清辉与圆月盛进杯光', s: '李常超《盗墓笔记·十年人间》' },
+  { t: '月光常常常常到故里，送回多少离人唏嘘', s: '音频怪物《琴师》' },
+  { t: '你说金戈换故里，东篱烽火祭，太平长安梨园戏，在堂一粢醍', s: '音频怪物《典狱司》' },
+  { t: '不如就此相忘于尘世间，今夜无风无月，星河天悬', s: '音频怪物《浮生未歇》' },
+  { t: '醉极卧云外山河，云子闲敲夜船静', s: 'HITA/音频怪物《闻说》' },
+  { t: '十指曼若，刹那莲华绽落，束带当风，秀骨清像描摹', s: 'HITA/音频怪物《闻说》' },
+  { t: '听说一点如漆，是游龙灵眸初启', s: 'winky诗《松烟入墨》' },
+  { t: '我恨飞盖妨了花又遮了雪，与霜与雾隔绝', s: 'winky诗《他山落雨》' },
+  { t: '孤烟无垠万里沙，幸能与你踏', s: '贰婶/流浪的蛙蛙《逐浪飞花》' },
+  { t: '情一物，无木成林无水行舟', s: '黄诗扶《吹梦到西洲》' },
+  { t: '万籁停吹奏，支颐听秋水问蜉蝣', s: '黄诗扶《吹梦到西洲》' },
+  { t: '从来酿酒的人，分外清醒，独善其身', s: '黄诗扶《九万字》' },
+  { t: '有谁不是 少年热诚，孑然一身 爱一个人', s: '黄诗扶《九万字》' },
+  { t: '我也算万种风情，实非良人，谁能有幸错付终身', s: '黄诗扶《九万字》' },
+  { t: '还乡还乡，楚水汤汤，烟雨最断肠', s: '黄诗扶《楚歌起》' },
+  { t: '你听长风起平芜，仓惶追薄暮', s: '黄诗扶《楚歌起》' },
+  { t: '风飒飒雨打打穿林啸，乌压压起松梢，顾不得风雨打度良宵', s: '黄诗扶《夜奔》' },
+  { t: '挣残命一条', s: '黄诗扶《夜奔》' },
+  { t: '合上书中，荒原每寸逆风的石楠，结局便与你无关', s: '贰婶《石楠小札》' },
+  { t: '他本是一世无双，太子位沉檀凝香', s: '贰婶《哪吒》' },
+  { t: '万般过眼成空，有你便不同', s: '贰婶《悟空》' },
+  { t: '把酒祝东风，且祝山河与共的从容', s: 'Aki阿杰《东风志》' },
+  { t: '若负剑过群峰，云深不知竟一人一骑，青山几重', s: 'Aki阿杰《东风志》' },
+  { t: '眉间点血，衣上牡丹，愈笑愈孤寒', s: 'Aki阿杰《东风志》' },
+  { t: '重逢前临别后，拨雪寻春烧灯续昼', s: 'Aki阿杰《何以歌》' },
+  { t: '位卑未敢忘忧国，哪怕无人知我', s: 'HITA《赤伶》' },
+  { t: '你方唱罢我登场，莫嘲风月戏，莫笑人荒唐', s: 'HITA《赤伶》' },
+  { t: '灯花落，红蜡凝固在卷角那一折', s: 'HITA《昔言》' },
+  { t: '浪淘尽，大江东去，千古，一双人，多情应笑我，为你入红尘', s: 'HITA《江东双璧》' },
+  { t: '自春生，入秋藏，天之道四时更迭有常', s: '小爱的妈《江山雪》' },
+  { t: '情不敢至深，恐大梦一场；卦不敢算尽，畏天道无常', s: '小爱的妈《江山雪》' },
+  { t: '纯则粹，阳则刚，天行健，两仪遵道恒长', s: '小爱的妈《江山雪》' },
+  { t: '听清风追逐流云缠绵飞舞的痴狂', s: '小爱的妈《江山雪》' },
+  { t: '身披长梦渡荒野，千秋未敢一醉', s: '小坠《天地浮雪》' },
+  { t: '少年尽处又少年，满地落花似与谁同眠', s: '小坠《天地浮雪》' },
+  { t: '长风飘入百帆微卷，一缕桂红向山外熄灭', s: '小坠《天地浮雪》' },
+  { t: '鹫峰万仞翠竹千棵，朗月也共坐', s: '小坠《放鹤亭》' },
+  { t: '我酿好月亮，候在旧城墙，在醉里见你，千场万场', s: '小坠/Mario《借月留光》' },
+  { t: '每一面都是，人间模样', s: '小坠/Mario《借月留光》' },
+  { t: '桃花都吹落，春秋都吹落，最懂竟是梦中那一刻', s: '不才《寻常歌》' },
+  { t: '长生长漂泊，复醒复作客，年头年尾各自活', s: '不才《寻常歌》' },
+  { t: '书致故乡人，十二年春已过，万事逐流去，也顺遂也蹉跎', s: '不才《寻常歌》' },
+  { t: '若不能共老水云间，见长剑覆雪，如见并肩', s: '不才《涉川》' },
+  { t: '有情处天地最仓皇，扇底风换了鬓底飞霜', s: '不才《涉川》' },
+  { t: '月是江心风流眼，我自举杯，杨柳掀帘，敬此生颠沛', s: '不才《涉川》' },
+  { t: '我行过草木炎凉，山高水远岁月柔长', s: '不才《涉川》' },
+  { t: '彼岸回首，与我听江潮，明日孤舟，余生皆渺渺', s: '不才《归潮》' },
+  { t: '当年万里觅风月，夜航船，如今江南也不眼馋', s: '司南《吹灭小山河》' },
+  { t: '愧字乐天，从来好梦微', s: '洛天依/言和《人间应又雪》' },
+  { t: '北地麦浪，南疆稻香，渠水在荒年仍低声吟唱', s: '忘川风华录/星尘Infinity《远方》' },
+  { t: '谁人他日若祭我，料来此身已在中原', s: '忘川风华录/海伊/星尘Minus《补天裂》' },
+  { t: '浮生旧事多不值一提，除却曾得知音你', s: '忘川风华录/洛天依/乐正绫《易水诀》' },
+  { t: '多情岸，忽我梦醒间皆了然', s: '忘川风华录/洛天依《多情岸》' },
+  { t: '颠沛过，将问鼎于尘埃，追随过，拜星辰列云台', s: '忘川风华录/乐正绫《拜云台》' },
+  { t: '君欲守土复开疆，血犹热，志四方，我为君擦拭缨枪，为君披戎装', s: 'i2star《闻战》' },
+  { t: '我织一片明月光，愿为君司南', s: 'i2star《闻战》' },
+  { t: '你走过治国经略，书写历史的轮廓；王侯将相的叙事吞噬少年旧肝胆', s: '茶了了《眉间冬赴春》' },
+  { t: '天公爵微倾 洒下一壶酒', s: '绯村柯北《天命风流》' }
+];
+
+/* 每个池子的大小 */
+const POOLS = {
+  poem: { list: SU_SHI, label: '诗词', credit: '苏轼' },
+  lyric: { list: LYRICS, label: '歌词', credit: '' },
+  quote: { list: QUOTES, label: '名言', credit: '' }
+};
+
+/* 抽取逻辑：从三个池子里挑一个，再从这个池子里随机选一条未用过的 */
+function drawOne(usedSet) {
+  // 合并所有池子的索引 [poolType, idx]
+  const all = [];
+  for (const key of Object.keys(POOLS)) {
+    const list = POOLS[key].list;
+    for (let i = 0; i < list.length; i++) {
+      const k = key + ':' + i;
+      if (!usedSet.has(k)) all.push({ pool: key, idx: i, key: k });
+    }
+  }
+  if (!all.length) return null;
+  const pick = all[Math.floor(Math.random() * all.length)];
+  return pick;
+}
 
 /* ==================== 工具函数 ==================== */
 const $ = (s, r = document) => r.querySelector(s);
@@ -324,9 +684,44 @@ function download(filename, content, type) {
   a.click();
   URL.revokeObjectURL(a.href);
 }
+function neteaseSearchUrl(songTitle) {
+  // 只取歌名部分搜索（如果有 - 歌手，取前面）
+  const title = songTitle.split(' - ')[0].split('|')[0].trim();
+  return 'https://music.163.com/#/search/m/?s=' + encodeURIComponent(title) + '&type=1';
+}
+function copyText(text) {
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    return navigator.clipboard.writeText(text).then(() => toast('已复制')).catch(() => fallbackCopy(text));
+  }
+  fallbackCopy(text);
+}
+function fallbackCopy(text) {
+  const ta = document.createElement('textarea');
+  ta.value = text;
+  ta.style.position = 'fixed';
+  ta.style.left = '-9999px';
+  document.body.appendChild(ta);
+  ta.select();
+  try { document.execCommand('copy'); toast('已复制'); }
+  catch (e) { toast('复制失败'); }
+  ta.remove();
+}
+function splitSong(line) {
+  line = line.trim();
+  if (!line) return null;
+  // 支持 " - " 和 "|" 分隔
+  let name = line, singer = '';
+  const idx1 = line.indexOf(' - ');
+  const idx2 = line.indexOf('|');
+  if (idx1 > 0) { name = line.slice(0, idx1).trim(); singer = line.slice(idx1 + 3).trim(); }
+  else if (idx2 > 0) { name = line.slice(0, idx2).trim(); singer = line.slice(idx2 + 1).trim(); }
+  if (!name) return null;
+  return singer ? `${name} - ${singer}` : name;
+}
 
 /* ==================== 状态与持久化 ==================== */
 const STORE_KEY = 'life_dashboard_v1';
+const PICK_RECENT_DAYS = 45;  // 一个池子最近多少天不重复
 
 function defaultState() {
   return {
@@ -354,7 +749,10 @@ function defaultState() {
     daySchedules: {},
     logs: {},
     entries: [],
-    songs: []
+    songList: [],       // 歌名数组 "歌名 - 歌手"
+    dailySongs: {},     // { "2026-10-11": "歌名 - 歌手" }
+    dailyPicks: {},     // { "2026-10-11": { pool:'poem'|'lyric'|'quote', idx, text, source } }
+    customPool: { poem: [], lyric: [], quote: [] }  // 用户自己添加的
   };
 }
 
@@ -375,7 +773,16 @@ function loadState() {
       s.daySchedules = s.daySchedules || {};
       s.logs = s.logs || {};
       s.entries = s.entries || [];
-      s.songs = s.songs || [];
+      s.songList = Array.isArray(s.songList) ? s.songList : [];
+      s.dailySongs = s.dailySongs || {};
+      s.dailyPicks = s.dailyPicks || {};
+      s.customPool = s.customPool || { poem: [], lyric: [], quote: [] };
+      if (!Array.isArray(s.customPool.poem)) s.customPool.poem = [];
+      if (!Array.isArray(s.customPool.lyric)) s.customPool.lyric = [];
+      if (!Array.isArray(s.customPool.quote)) s.customPool.quote = [];
+      delete s.songs;
+      delete s.dailyPoems;
+      delete s.dailyLyrics;
       return s;
     }
   } catch (e) { console.error(e); }
@@ -391,119 +798,98 @@ function save() {
   }
 }
 
-/* ==================== 音乐：IndexedDB ==================== */
-const DB_NAME = 'life_dashboard_audio';
-const AUDIO_STORE = 'songs';
-let audioEl = null;
-let currentSongId = null;
-let currentObjectUrl = null;
+/* ==================== 每日抽取 ==================== */
+function getFullPool(poolType) {
+  const base = POOLS[poolType].list;
+  const custom = (state.customPool && state.customPool[poolType]) || [];
+  return [...base, ...custom];
+}
 
-function openAudioDB() {
-  return new Promise((resolve, reject) => {
-    const req = indexedDB.open(DB_NAME, 1);
-    req.onupgradeneeded = () => {
-      const db = req.result;
-      if (!db.objectStoreNames.contains(AUDIO_STORE)) {
-        db.createObjectStore(AUDIO_STORE);
-      }
-    };
-    req.onsuccess = () => resolve(req.result);
-    req.onerror = () => reject(req.error);
-  });
+function getAllPoolEntries() {
+  const out = [];
+  for (const key of Object.keys(POOLS)) {
+    const list = getFullPool(key);
+    for (let i = 0; i < list.length; i++) {
+      out.push({ pool: key, idx: i, key: key + ':' + i, ...list[i] });
+    }
+  }
+  return out;
 }
-async function putAudioBlob(key, blob) {
-  const db = await openAudioDB();
-  return new Promise((resolve, reject) => {
-    const tx = db.transaction(AUDIO_STORE, 'readwrite');
-    tx.objectStore(AUDIO_STORE).put(blob, key);
-    tx.oncomplete = () => resolve();
-    tx.onerror = () => reject(tx.error);
+
+function drawOne() {
+  const all = getAllPoolEntries();
+  if (!all.length) return null;
+  // 收集最近 PICK_RECENT_DAYS 天用过的 key
+  const used = new Set();
+  const dates = Object.keys(state.dailyPicks).sort();
+  const recentDates = dates.slice(-PICK_RECENT_DAYS);
+  recentDates.forEach(d => {
+    const p = state.dailyPicks[d];
+    if (p && p.poolKey) used.add(p.poolKey);
   });
+  // 候选
+  let candidates = all.filter(x => !used.has(x.key));
+  if (!candidates.length) candidates = all; // 池子用尽，重置
+  const pick = candidates[Math.floor(Math.random() * candidates.length)];
+  return pick;
 }
-async function getAudioBlob(key) {
-  const db = await openAudioDB();
-  return new Promise((resolve, reject) => {
-    const tx = db.transaction(AUDIO_STORE, 'readonly');
-    const req = tx.objectStore(AUDIO_STORE).get(key);
-    req.onsuccess = () => resolve(req.result);
-    req.onerror = () => reject(req.error);
-  });
+
+function ensureTodayPick() {
+  const today = todayStr();
+  if (state.dailyPicks[today]) return;
+  const pick = drawOne();
+  if (!pick) return;
+  state.dailyPicks[today] = {
+    pool: pick.pool,
+    idx: pick.idx,
+    poolKey: pick.key,
+    text: pick.t,
+    source: pick.s
+  };
+  save();
 }
-async function deleteAudioBlob(key) {
-  const db = await openAudioDB();
-  return new Promise((resolve, reject) => {
-    const tx = db.transaction(AUDIO_STORE, 'readwrite');
-    tx.objectStore(AUDIO_STORE).delete(key);
-    tx.oncomplete = () => resolve();
-    tx.onerror = () => reject(tx.error);
-  });
+
+function getTodayPick() {
+  const today = todayStr();
+  return state.dailyPicks[today] || null;
+}
+
+function getPickForDate(dateStr) {
+  return state.dailyPicks[dateStr] || null;
+}
+
+/* ==================== 歌单 ==================== */
+function pickSongByDate(dateStr) {
+  if (!state.songList.length) return null;
+  let hash = 0;
+  for (let i = 0; i < dateStr.length; i++) {
+    hash = ((hash << 5) - hash + dateStr.charCodeAt(i)) | 0;
+  }
+  return state.songList[Math.abs(hash) % state.songList.length];
 }
 
 function getTodaySong() {
-  if (!state.songs || !state.songs.length) return null;
+  if (!state.songList.length) return null;
   const today = todayStr();
-  let hash = 0;
-  for (let i = 0; i < today.length; i++) hash = ((hash << 5) - hash + today.charCodeAt(i)) | 0;
-  return state.songs[Math.abs(hash) % state.songs.length];
+  const rec = state.dailySongs[today];
+  if (rec) return rec;
+  return pickSongByDate(today);
 }
-function getRandomSong() {
-  if (!state.songs || !state.songs.length) return null;
-  return state.songs[Math.floor(Math.random() * state.songs.length)];
+
+function ensureTodaySongRecorded() {
+  if (!state.songList.length) return;
+  const today = todayStr();
+  if (state.dailySongs[today]) return;
+  const title = pickSongByDate(today);
+  if (!title) return;
+  state.dailySongs[today] = title;
+  save();
 }
-async function loadSongSrc(song) {
-  if (!song) return null;
-  if (song.type === 'url') return song.url;
-  if (song.type === 'file') {
-    const blob = await getAudioBlob(song.blobKey);
-    if (!blob) return null;
-    if (currentObjectUrl) URL.revokeObjectURL(currentObjectUrl);
-    currentObjectUrl = URL.createObjectURL(blob);
-    return currentObjectUrl;
-  }
-  return null;
-}
-async function playSong(song) {
-  if (!song || !audioEl) return;
-  try {
-    const src = await loadSongSrc(song);
-    if (!src) { toast('无法加载音频'); return; }
-    audioEl.src = src;
-    await audioEl.play();
-    currentSongId = song.id;
-    updateMiniPlayer();
-  } catch (e) {
-    console.warn(e);
-    toast('播放失败（浏览器可能拦截了自动播放）');
-  }
-}
-function togglePlay() {
-  if (!audioEl) return;
-  if (!state.songs.length) { toast('歌单为空'); return; }
-  if (!audioEl.src) {
-    const song = getTodaySong();
-    if (song) playSong(song);
-    return;
-  }
-  if (audioEl.paused) audioEl.play().then(updateMiniPlayer).catch(() => toast('播放失败'));
-  else { audioEl.pause(); updateMiniPlayer(); }
-}
-function updateMiniPlayer() {
-  const mp = $('#miniPlayer');
-  if (!mp) return;
-  if (!state.songs || !state.songs.length) {
-    mp.style.display = 'none';
-    document.body.classList.remove('has-player');
-    return;
-  }
-  mp.style.display = 'flex';
-  document.body.classList.add('has-player');
-  let displaySong = null;
-  if (currentSongId) displaySong = state.songs.find(s => s.id === currentSongId) || getTodaySong();
-  else displaySong = getTodaySong();
-  $('#miniTitle').textContent = displaySong ? displaySong.title : '—';
-  const btn = $('#miniPlay');
-  if (audioEl && !audioEl.paused) btn.textContent = '⏸';
-  else btn.textContent = '▶';
+
+function getSongForDate(dateStr) {
+  if (state.dailySongs[dateStr]) return state.dailySongs[dateStr];
+  if (!state.songList.length) return null;
+  return pickSongByDate(dateStr);
 }
 
 /* ==================== 外观应用 ==================== */
@@ -557,7 +943,6 @@ async function syncToCloud() {
       const { error } = await sbClient.from('modules').upsert(payload);
       if (error) console.error('同步模块失败', error);
     }
-
     if (state.entries.length) {
       const payload = state.entries.map(e => ({
         id: e.id, user_id: currentUser.id, date: e.date,
@@ -572,7 +957,6 @@ async function syncToCloud() {
         if (error) console.error('同步记录失败', error);
       }
     }
-
     const dayPlanKeys = Object.keys(state.dayPlans);
     if (dayPlanKeys.length) {
       const payload = dayPlanKeys.map(d => ({
@@ -582,7 +966,6 @@ async function syncToCloud() {
       const { error } = await sbClient.from('day_plans').upsert(payload);
       if (error) console.error('同步日计划失败', error);
     }
-
     const logKeys = Object.keys(state.logs);
     if (logKeys.length) {
       const payload = logKeys.map(d => ({
@@ -592,7 +975,6 @@ async function syncToCloud() {
       const { error } = await sbClient.from('daily_logs').upsert(payload);
       if (error) console.error('同步日志失败', error);
     }
-
     console.log('☁️ 云端同步完成');
   } catch (err) {
     console.error('同步异常', err);
@@ -637,7 +1019,6 @@ async function syncFromCloud() {
       state.logs = {};
       cl.forEach(item => { state.logs[item.date] = item.content || ''; });
     }
-
     save();
     render();
     console.log('☁️ 云端数据已拉取并覆盖本地');
@@ -743,13 +1124,10 @@ function getScheduleTotalForModule(dateStr, moduleId) {
 }
 
 function getDayTarget(dateStr, moduleId) {
-  // 1. 手动填的值优先
   const manual = (state.dayPlans[dateStr] || {})[moduleId];
   if (manual != null) return manual;
-  // 2. 有该模块的时间段 → 累加
   const schedTotal = getScheduleTotalForModule(dateStr, moduleId);
   if (schedTotal > 0) return schedTotal;
-  // 3. 用默认每日目标
   const m = state.modules.find(x => x.id === moduleId);
   if (!m) return null;
   return getDefaultDaily(m);
@@ -805,9 +1183,8 @@ function render() {
   else if (currentView === 'plan') renderPlan(app);
   else if (currentView === 'modules') renderModules(app);
   else if (currentView === 'review') renderReview(app);
-  else if (currentView === 'music') renderMusic(app);
+  else if (currentView === 'daily') renderDaily(app);
   else if (currentView === 'settings') renderSettings(app);
-  updateMiniPlayer();
 }
 
 /* ==================== 仪表盘 ==================== */
@@ -975,6 +1352,9 @@ function renderLog(app) {
   const totalMin = dayEntries.reduce((s, e) => s + e.duration, 0);
   const logContent = state.logs[viewDate] || '';
 
+  const song = getSongForDate(viewDate);
+  const pick = getPickForDate(viewDate);
+
   const modOptions = mods.map(m => `<option value="${m.id}">${esc(m.name)}</option>`).join('');
 
   app.innerHTML = `
@@ -1031,6 +1411,10 @@ function renderLog(app) {
     <div class="form-card">
       <textarea id="logArea" placeholder="今天发生了什么？感受如何？有什么想法？">${esc(logContent)}</textarea>
       <div class="muted" style="margin-top:8px" id="logStatus">${logContent ? '已保存' : ''}</div>
+      <div class="day-meta">
+        ${song ? `<div class="day-meta-item">🎵 <b>${esc(song)}</b></div>` : ''}
+        ${pick ? `<div class="day-meta-item">📜 ${esc(pick.text)}<br><span style="font-size:12px">—— ${esc(pick.source)}</span></div>` : ''}
+      </div>
     </div>
   `;
 
@@ -1213,7 +1597,6 @@ function renderPlan(app) {
         <div class="stat-value" style="color:${dayRest >= 0 ? 'var(--green)' : 'var(--red)'}">${fmtHours(Math.abs(dayRest))}</div></div>
     </div>
 
-    <!-- 时间段 -->
     <div class="section-head">
       <h3>时间段安排</h3>
       <div class="muted">共 ${fmtHours(schedTotal)} · 自动汇总到模块目标</div>
@@ -1229,7 +1612,6 @@ function renderPlan(app) {
       </div>
     </div>
 
-    <!-- 按模块汇总 -->
     <div class="section-head"><h3>日计划（按模块汇总）</h3>
       <div class="muted">填数字可覆盖自动汇总</div>
     </div>
@@ -1251,7 +1633,6 @@ function renderPlan(app) {
     </div>
   `;
 
-  /* ---- 时间段列表 ---- */
   const schedList = $('#schedList');
   if (!schedules.length) {
     schedList.innerHTML = '<div class="empty" style="padding:12px 0">还没有时间段，下面添加一个</div>';
@@ -1293,16 +1674,12 @@ function renderPlan(app) {
     const dur = calcDuration(start, end);
     if (dur <= 0) { toast('结束时间要晚于开始时间'); return; }
     if (!state.daySchedules[day]) state.daySchedules[day] = [];
-    state.daySchedules[day].push({
-      id: uid('sched'),
-      moduleId, start, end
-    });
+    state.daySchedules[day].push({ id: uid('sched'), moduleId, start, end });
     save();
     toast('已添加');
     render();
   };
 
-  /* ---- 日计划表 ---- */
   const dayBody = $('#dayBody');
   mods.forEach(m => {
     const tr = document.createElement('tr');
@@ -1331,18 +1708,13 @@ function renderPlan(app) {
     const mid = inp.dataset.mid;
     const hours = parseFloat(inp.value);
     if (!state.dayPlans[day]) state.dayPlans[day] = {};
-    if (isNaN(hours)) {
-      // 清空 → 恢复自动
-      delete state.dayPlans[day][mid];
-    } else {
-      state.dayPlans[day][mid] = Math.round(hours * 60);
-    }
+    if (isNaN(hours)) delete state.dayPlans[day][mid];
+    else state.dayPlans[day][mid] = Math.round(hours * 60);
     save();
     toast('已更新');
     render();
   });
 
-  /* ---- 本周汇总 ---- */
   const weekBody = $('#weekBody');
   mods.forEach(m => {
     const tr = document.createElement('tr');
@@ -1494,145 +1866,161 @@ function openModuleModal(id) {
   };
 }
 
-/* ==================== 音乐页 ==================== */
-async function handleSongUpload(files) {
-  let added = 0, failed = 0;
-  for (const file of files) {
-    const okExt = /\.(mp3|m4a|flac|wav|ogg|aac)$/i.test(file.name);
-    const okType = file.type.startsWith('audio/');
-    if (!okType && !okExt) { failed++; continue; }
-    if (file.size > 30 * 1024 * 1024) { failed++; continue; }
-    try {
-      const key = 'audio_' + Date.now() + '_' + Math.random().toString(36).slice(2, 7);
-      await putAudioBlob(key, file);
-      const name = file.name.replace(/\.[^.]+$/, '');
-      state.songs.push({
-        id: uid('song'),
-        title: name,
-        type: 'file',
-        blobKey: key,
-        createdAt: Date.now()
-      });
-      added++;
-    } catch (err) {
-      console.error(err);
-      failed++;
-    }
-  }
-  if (added) save();
-  if (added && !failed) toast('已添加 ' + added + ' 首');
-  else if (added && failed) toast('已添加 ' + added + ' 首，' + failed + ' 首失败');
-  else toast('没有添加成功');
-  render();
-}
+/* ==================== 每日页 ==================== */
+function renderDaily(app) {
+  const today = todayStr();
+  const song = getTodaySong();
+  const pick = getTodayPick();
 
-function renderMusic(app) {
-  const songs = state.songs || [];
-  const today = getTodaySong();
+  const songCount = state.songList.length;
+  const poemCount = POOLS.poem.list.length + state.customPool.poem.length;
+  const lyricCount = POOLS.lyric.list.length + state.customPool.lyric.length;
+  const quoteCount = POOLS.quote.list.length + state.customPool.quote.length;
+
+  const songHistory = Object.entries(state.dailySongs || {})
+    .sort((a, b) => b[0].localeCompare(a[0])).slice(0, 30);
+  const pickHistory = Object.entries(state.dailyPicks || {})
+    .sort((a, b) => b[0].localeCompare(a[0])).slice(0, 30);
 
   app.innerHTML = `
-    <div class="section-head"><h2>今日音乐</h2><div class="muted">每天随机一首</div></div>
+    <div class="section-head"><h2>每日</h2><div class="muted">${today}（${WEEK_NAMES[parseDate(today).getDay()]}）</div></div>
 
-    <div class="card" style="margin-bottom:16px">
-      ${today ? `
-        <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap">
-          <div style="flex:1;min-width:200px">
-            <div class="muted" style="font-size:12px;margin-bottom:6px">今日推荐</div>
-            <div style="font-size:18px;font-weight:600">${esc(today.title)}</div>
-          </div>
-          <button class="btn primary" id="playTodayBtn">▶ 播放</button>
-          <button class="btn" id="randomBtn">🎲 换一首</button>
+    <div class="daily-card">
+      <div class="daily-label">🎵 今日歌曲</div>
+      ${song ? `
+        <div class="daily-song" id="songTitle">${esc(song)}</div>
+        <div class="daily-song-actions">
+          <a class="btn sm primary" href="${neteaseSearchUrl(song)}" target="_blank" rel="noopener">去网易云音乐</a>
+          <button class="btn sm" id="copySongBtn">复制歌名</button>
         </div>
-      ` : `<div class="empty">还没有歌曲，先添加几首吧</div>`}
+      ` : `<div class="empty">歌单为空，往下滑添加几首歌</div>`}
     </div>
 
-    <div class="section-head"><h3>添加歌曲</h3></div>
+    <div class="daily-card">
+      <div class="daily-label">✨ 今日一句</div>
+      ${pick ? `
+        <div class="daily-quote">${esc(pick.text)}</div>
+        <div class="daily-source">—— ${esc(pick.source)}</div>
+        <div class="daily-song-actions" style="margin-top:12px">
+          <button class="btn sm" id="copyQuoteBtn">复制</button>
+        </div>
+      ` : `<div class="empty">暂无内容</div>`}
+    </div>
 
-    <div class="form-card">
+    <div class="section-head"><h3>歌单管理</h3><div class="muted">共 ${songCount} 首</div></div>
+    <div class="card" style="margin-bottom:16px">
       <div class="tip-box" style="margin-bottom:12px">
-        <b>上传技巧</b><br>
-        · 手机弹出菜单时选「浏览 / 文件 / 选取文件」，不要选「语音备忘录」<br>
-        · 支持 mp3 / m4a / flac / wav / ogg，单个 ≤ 30MB<br>
-        · 不支持网易云 .ncm 加密格式<br>
-        · 可以一次选多个文件批量添加
+        <b>批量粘贴格式</b>：每行一首，用 <code>-</code> 或 <code>|</code> 分隔，例如：<br>
+        牵丝戏 - 银临<br>
+        赤伶 | HITA
       </div>
-      <div class="field">
-        <label>上传本地音频（支持多选）</label>
-        <button class="btn primary" id="songFileBtn">📁 选择一个或多个音频文件</button>
+      <textarea id="songInput" placeholder="牵丝戏 - 银临&#10;赤伶 - HITA&#10;倾尽天下 - 河图" style="min-height:120px"></textarea>
+      <div class="row" style="margin-top:10px">
+        <button class="btn primary" id="songImportBtn">批量导入</button>
+        <button class="btn danger" id="songClearBtn">清空歌单</button>
       </div>
     </div>
 
-    <div class="section-head"><h3>歌单（${songs.length} 首）</h3>
-      ${songs.length ? '<button class="btn sm" id="playRandomAll">随机播放一首</button>' : ''}
+    ${songHistory.length ? `
+      <div class="card" style="margin-bottom:16px">
+        <div class="card-title">歌单历史（最近 30 天）</div>
+        <table>
+          <thead><tr><th style="width:120px">日期</th><th>歌曲</th></tr></thead>
+          <tbody>${songHistory.map(([d, s]) => `<tr><td>${d}</td><td>${esc(s)}</td></tr>`).join('')}</tbody>
+        </table>
+      </div>
+    ` : ''}
+
+    <div class="section-head"><h3>内容池</h3>
+      <div class="muted">诗 ${poemCount} ｜ 歌词 ${lyricCount} ｜ 名言 ${quoteCount}</div>
     </div>
-    <div id="songList"></div>
+    <div class="card" style="margin-bottom:16px">
+      <div class="tip-box" style="margin-bottom:12px">
+        <b>批量添加</b>：每行一条，用 <code>|</code> 分隔内容和出处，例如：<br>
+        你是我身外，化白云任去来|银临《是风动》<br>
+        我唯一知道的就是我一无所知|苏格拉底
+      </div>
+      <div class="row" style="margin-bottom:8px">
+        <select id="poolType" style="min-width:120px">
+          <option value="poem">诗词</option>
+          <option value="lyric">歌词</option>
+          <option value="quote">名言</option>
+        </select>
+      </div>
+      <textarea id="poolInput" placeholder="内容|出处&#10;内容|出处" style="min-height:100px"></textarea>
+      <div class="row" style="margin-top:10px">
+        <button class="btn primary" id="poolImportBtn">批量添加</button>
+      </div>
+      <div class="muted" style="margin-top:8px">自己添加的内容只保存在本地，不同步云端（避免和内置的混在一起）。</div>
+    </div>
+
+    ${pickHistory.length ? `
+      <div class="card">
+        <div class="card-title">每日一句历史（最近 30 天）</div>
+        <table>
+          <thead><tr><th style="width:120px">日期</th><th>内容</th><th style="width:140px">出处</th></tr></thead>
+          <tbody>
+            ${pickHistory.map(([d, p]) => `<tr><td>${d}</td><td>${esc(p.text)}</td><td>${esc(p.source)}</td></tr>`).join('')}
+          </tbody>
+        </table>
+      </div>
+    ` : ''}
   `;
 
-  const list = $('#songList');
-  if (!songs.length) list.innerHTML = '<div class="empty">歌单为空</div>';
-  songs.forEach(s => {
-    const el = document.createElement('div');
-    el.className = 'entry';
-    el.innerHTML = `
-      <span class="dot" style="background:var(--accent)"></span>
-      <span class="entry-name">${esc(s.title)}</span>
-      <span class="tag">${s.type === 'file' ? '本地' : '链接'}</span>
-      <button class="icon-btn" data-play="${s.id}" title="播放">▶</button>
-      <button class="icon-btn" data-del="${s.id}" title="删除">✕</button>
-    `;
-    list.appendChild(el);
-  });
+  if (song) {
+    $('#copySongBtn').onclick = () => copyText(song);
+  }
+  if (pick) {
+    $('#copyQuoteBtn').onclick = () => copyText(pick.text + ' —— ' + pick.source);
+  }
 
-  if (today) $('#playTodayBtn').onclick = () => playSong(today);
-  const randomBtn = $('#randomBtn');
-  if (randomBtn) randomBtn.onclick = () => { const s = getRandomSong(); if (s) playSong(s); };
-  const randomAll = $('#playRandomAll');
-  if (randomAll) randomAll.onclick = () => { const s = getRandomSong(); if (s) playSong(s); };
-
-  $('#songFileBtn').onclick = () => {
-    try {
-      const inp = document.createElement('input');
-      inp.type = 'file';
-      inp.accept = '';
-      inp.multiple = true;
-      inp.style.position = 'fixed';
-      inp.style.left = '-9999px';
-      document.body.appendChild(inp);
-      inp.onchange = async ev => {
-        const files = ev.target.files;
-        setTimeout(() => inp.remove(), 500);
-        if (!files || !files.length) return;
-        await handleSongUpload([...files]);
-      };
-      inp.click();
-    } catch (e) { toast('打开文件选择器失败'); }
+  /* 歌单批量导入 */
+  $('#songImportBtn').onclick = () => {
+    const text = $('#songInput').value;
+    const lines = text.split('\n').map(l => l.trim()).filter(Boolean);
+    if (!lines.length) { toast('请输入歌名'); return; }
+    const newSongs = lines.map(splitSong).filter(Boolean);
+    if (!newSongs.length) { toast('没有有效行'); return; }
+    // 合并去重
+    const existing = new Set(state.songList);
+    let added = 0;
+    newSongs.forEach(s => {
+      if (!existing.has(s)) { state.songList.push(s); existing.add(s); added++; }
+    });
+    save();
+    ensureTodaySongRecorded();
+    toast('添加 ' + added + ' 首');
+    render();
   };
 
-  list.addEventListener('click', async ev => {
-    const playBtn = ev.target.closest('[data-play]');
-    const delBtn = ev.target.closest('[data-del]');
-    if (playBtn) {
-      const s = state.songs.find(x => x.id === playBtn.dataset.play);
-      if (s) playSong(s);
-    }
-    if (delBtn) {
-      const id = delBtn.dataset.del;
-      const s = state.songs.find(x => x.id === id);
-      if (!s) return;
-      if (!confirm('确定删除《' + s.title + '》？')) return;
-      if (s.type === 'file' && s.blobKey) {
-        try { await deleteAudioBlob(s.blobKey); } catch (e) { console.warn(e); }
+  $('#songClearBtn').onclick = () => {
+    if (!state.songList.length) { toast('歌单已空'); return; }
+    if (!confirm('确定清空所有歌曲？历史记录会保留。')) return;
+    state.songList = [];
+    save();
+    render();
+  };
+
+  /* 内容池批量导入 */
+  $('#poolImportBtn').onclick = () => {
+    const type = $('#poolType').value;
+    const text = $('#poolInput').value;
+    const lines = text.split('\n').map(l => l.trim()).filter(Boolean);
+    if (!lines.length) { toast('请输入内容'); return; }
+    let added = 0;
+    lines.forEach(line => {
+      let t = line, s = '';
+      const idx = line.indexOf('|');
+      if (idx > 0) { t = line.slice(0, idx).trim(); s = line.slice(idx + 1).trim(); }
+      if (t) {
+        state.customPool[type].push({ t, s });
+        added++;
       }
-      if (currentSongId === id) {
-        if (audioEl) { audioEl.pause(); audioEl.src = ''; }
-        currentSongId = null;
-      }
-      state.songs = state.songs.filter(x => x.id !== id);
-      save();
-      render();
-      updateMiniPlayer();
-    }
-  });
+    });
+    save();
+    toast('添加 ' + added + ' 条');
+    render();
+  };
 }
 
 /* ==================== 回顾页 ==================== */
@@ -1660,7 +2048,13 @@ function renderReview(app) {
   const dayTotals = days.map(d => state.entries.filter(e => e.date === d).reduce((s, e) => s + e.duration, 0));
   const maxDay = Math.max(...dayTotals, 1);
 
-  const weekLogs = days.filter(d => state.logs[d]).map(d => ({ date: d, content: state.logs[d] }));
+  // 本周日志 + 每天的歌和诗句
+  const weekLogs = days.filter(d => state.logs[d]).map(d => ({
+    date: d,
+    content: state.logs[d],
+    song: getSongForDate(d),
+    pick: getPickForDate(d)
+  }));
 
   app.innerHTML = `
     <div class="section-head">
@@ -1738,9 +2132,13 @@ function renderReview(app) {
       <div class="card">
         <div class="card-title">本周日志</div>
         ${weekLogs.map(l => `
-          <div style="padding:10px 0;border-bottom:1px solid var(--border)">
+          <div style="padding:12px 0;border-bottom:1px solid var(--border)">
             <div class="muted" style="margin-bottom:5px">${l.date}</div>
             <div style="white-space:pre-wrap;line-height:1.6">${esc(l.content)}</div>
+            <div class="day-meta">
+              ${l.song ? `<div class="day-meta-item">🎵 <b>${esc(l.song)}</b></div>` : ''}
+              ${l.pick ? `<div class="day-meta-item">📜 ${esc(l.pick.text)} <span style="font-size:12px">—— ${esc(l.pick.source)}</span></div>` : ''}
+            </div>
           </div>
         `).join('')}
       </div>
@@ -1939,9 +2337,6 @@ function renderSettings(app) {
         <input type="file" id="importFile" accept=".json" style="display:none">
         <button class="btn danger" id="resetBtn">清空所有数据</button>
       </div>
-      <div class="muted" style="margin-top:8px">
-        导出的 JSON 包含歌单信息，但<b>不包含</b>上传的本地音频文件。
-      </div>
     </div>
 
     <div class="card">
@@ -1954,7 +2349,7 @@ function renderSettings(app) {
     <div class="card" style="margin-top:16px">
       <div class="card-title">统计</div>
       <div class="muted">
-        模块数：${state.modules.length} ｜ 记录条数：${state.entries.length} ｜ 日计划数：${Object.keys(state.dayPlans).length} ｜ 日志数：${Object.keys(state.logs).length} ｜ 歌曲数：${(state.songs || []).length}
+        模块数：${state.modules.length} ｜ 记录条数：${state.entries.length} ｜ 日计划数：${Object.keys(state.dayPlans).length} ｜ 日志数：${Object.keys(state.logs).length} ｜ 歌单：${state.songList.length} 首 ｜ 自定义池：诗 ${state.customPool.poem.length} / 歌词 ${state.customPool.lyric.length} / 名言 ${state.customPool.quote.length}
       </div>
     </div>
   `;
@@ -1968,10 +2363,7 @@ function renderSettings(app) {
       toast('正在处理图片…');
       const dataUrl = await compressImage(file, 1920, 0.82);
       state.settings.bgImage = dataUrl;
-      save();
-      applyAppearance();
-      toast('背景已设置');
-      render();
+      save(); applyAppearance(); toast('背景已设置'); render();
     } catch (err) { toast('处理失败：' + err.message); }
   };
   $('#bgClearBtn').onclick = () => {
@@ -2045,8 +2437,7 @@ function renderSettings(app) {
 
   $('#setTheme').onchange = e => {
     state.settings.theme = e.target.value;
-    applyAppearance();
-    save();
+    applyAppearance(); save();
     toast('已切换');
     if (currentView === 'dashboard') render();
   };
@@ -2060,30 +2451,20 @@ function renderSettings(app) {
 
   $('#exportMd').onclick = () => {
     let md = `# 人生时间仪表盘\n\n导出时间：${new Date().toLocaleString()}\n\n`;
-    const logKeys = Object.keys(state.logs).sort();
-    if (logKeys.length) {
-      md += `## 每日日志\n\n`;
-      logKeys.forEach(d => { md += `### ${d}\n\n${state.logs[d]}\n\n`; });
-    }
-    md += `## 每周目标 vs 实际\n\n`;
-    const allWeeks = new Set();
-    state.entries.forEach(e => allWeeks.add(getWeekStart(e.date)));
-    allWeeks.add(getWeekStart(todayStr()));
-    const weeksSorted = [...allWeeks].sort();
-    weeksSorted.forEach(ws => {
-      const mods = getWeekModules(ws);
-      const actuals = getWeekActuals(ws);
-      md += `### ${ws} ~ ${getWeekDays(ws)[6]}\n\n`;
-      md += `| 模块 | 目标 | 实际 | 差额 |\n|---|---:|---:|---:|\n`;
-      mods.forEach(m => {
-        const a = actuals[m.id] || 0;
-        const t = m.target || 0;
-        const diff = a - t;
-        md += `| ${m.name} | ${t ? fmtHours(t) : '—'} | ${fmtHours(a)} | ${t ? (diff >= 0 ? '+' : '') + fmtHours(diff) : '—'} |\n`;
-      });
-      md += `\n`;
+    md += `## 每日日志\n\n`;
+    const allDays = new Set([...Object.keys(state.logs), ...Object.keys(state.dailySongs), ...Object.keys(state.dailyPicks)]);
+    const sortedDays = [...allDays].sort();
+    sortedDays.forEach(d => {
+      const log = state.logs[d];
+      const song = state.dailySongs[d];
+      const pick = state.dailyPicks[d];
+      if (!log && !song && !pick) return;
+      md += `### ${d}\n\n`;
+      if (song) md += `🎵 ${song}\n\n`;
+      if (pick) md += `📜 ${pick.text} —— ${pick.source}\n\n`;
+      if (log) md += `${log}\n\n`;
     });
-    download(`life-dashboard-logs-${todayStr()}.md`, md, 'text/markdown;charset=utf-8');
+    download(`life-dashboard-${todayStr()}.md`, md, 'text/markdown;charset=utf-8');
     toast('已导出 Markdown');
   };
 
@@ -2123,7 +2504,10 @@ function renderSettings(app) {
         state.dayPlans = state.dayPlans || {};
         state.daySchedules = state.daySchedules || {};
         state.logs = state.logs || {};
-        state.songs = state.songs || [];
+        state.songList = Array.isArray(state.songList) ? state.songList : [];
+        state.dailySongs = state.dailySongs || {};
+        state.dailyPicks = state.dailyPicks || {};
+        state.customPool = state.customPool || { poem: [], lyric: [], quote: [] };
         save();
         applyAppearance();
         reviewWeek = getWeekStart(todayStr());
@@ -2137,21 +2521,13 @@ function renderSettings(app) {
   $('#resetBtn').onclick = async () => {
     if (!confirm('确定清空所有数据？此操作不可恢复。')) return;
     if (!confirm('再确认一次：真的要清空吗？')) return;
-    try {
-      const db = await openAudioDB();
-      const tx = db.transaction(AUDIO_STORE, 'readwrite');
-      tx.objectStore(AUDIO_STORE).clear();
-    } catch (e) { console.warn(e); }
     await clearCloud();
     localStorage.removeItem(STORE_KEY);
     state = defaultState();
     save();
     applyAppearance();
-    if (audioEl) { audioEl.pause(); audioEl.src = ''; }
-    currentSongId = null;
     toast('已清空');
     render();
-    updateMiniPlayer();
   };
 }
 
@@ -2174,16 +2550,11 @@ function init() {
   planDate = todayStr();
   reviewWeek = getWeekStart(todayStr());
 
-  audioEl = $('#audioEl');
-  audioEl.addEventListener('play', updateMiniPlayer);
-  audioEl.addEventListener('pause', updateMiniPlayer);
-  audioEl.addEventListener('ended', () => {
-    const s = getRandomSong();
-    if (s && state.songs.length > 1) playSong(s);
-    else updateMiniPlayer();
-  });
-
   applyAppearance();
+
+  // 每天首次打开，记录今日歌曲和今日一句
+  ensureTodaySongRecorded();
+  ensureTodayPick();
 
   $('#tabs').addEventListener('click', e => {
     const btn = e.target.closest('.tab');
@@ -2206,18 +2577,6 @@ function init() {
     }
   });
 
-  $('#miniPlay').addEventListener('click', togglePlay);
-  $('#miniRandom').addEventListener('click', () => {
-    const s = getRandomSong();
-    if (s) playSong(s);
-  });
-  $('#miniInfo').addEventListener('click', () => {
-    currentView = 'music';
-    $$('.tab').forEach(t => t.classList.toggle('active', t.dataset.view === 'music'));
-    render();
-  });
-  $('#miniInfo').style.cursor = 'pointer';
-
   $('#authBtn').onclick = () => {
     if (currentUser) {
       if (!confirm('确定退出登录？')) return;
@@ -2233,7 +2592,11 @@ function init() {
         currentUser = session.user;
         $('#authStatus').textContent = currentUser.email;
         $('#authBtn').textContent = '退出登录';
-        syncFromCloud().then(() => render());
+        syncFromCloud().then(() => {
+          ensureTodaySongRecorded();
+          ensureTodayPick();
+          render();
+        });
       } else {
         currentUser = null;
         $('#authStatus').textContent = '';
@@ -2244,7 +2607,6 @@ function init() {
   }
 
   render();
-  updateMiniPlayer();
   registerSW();
 }
 

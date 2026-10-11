@@ -211,26 +211,69 @@ textarea{width:100%;resize:vertical;min-height:90px;line-height:1.6}
   font-size:11px;color:var(--dim);letter-spacing:.5px;
   margin-bottom:12px;font-weight:600;
 }
-.daily-song{
-  font-size:24px;font-weight:700;line-height:1.4;
-  color:var(--text);cursor:pointer;transition:.2s;
-  display:inline-block;
-}
-.daily-song:hover{color:var(--accent)}
-.daily-song-actions{margin-top:12px;display:flex;gap:8px;flex-wrap:wrap}
 .daily-quote{
-  font-size:17px;line-height:1.9;color:var(--text);
+  font-size:18px;line-height:1.9;color:var(--text);
   white-space:pre-wrap;margin-bottom:14px;
 }
 .daily-source{
   font-size:13px;color:var(--dim);text-align:right;
 }
+.daily-actions{margin-top:14px;display:flex;gap:8px;flex-wrap:wrap}
 .day-meta{
   margin-top:12px;padding-top:12px;border-top:1px dashed var(--border);
-  display:flex;flex-direction:column;gap:6px;
+  display:flex;flex-direction:column;gap:8px;
 }
 .day-meta-item{font-size:13px;line-height:1.7;color:var(--dim)}
 .day-meta-item b{color:var(--accent);font-weight:600}
+/* 每日弹窗 */
+.daily-popup-mask{
+  position:fixed;inset:0;background:rgba(0,0,0,.55);
+  display:flex;align-items:center;justify-content:center;
+  z-index:300;padding:20px;
+  animation:fadeIn .25s ease;
+}
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+.daily-popup{
+  background:rgb(var(--panel-rgb) / 1);
+  border-radius:20px;padding:26px 22px 22px;
+  width:100%;max-width:400px;
+  border:1px solid var(--border);
+  position:relative;overflow:hidden;
+  animation:popIn .35s cubic-bezier(.2,.9,.3,1.3);
+  box-shadow:0 20px 60px rgba(0,0,0,.3);
+}
+@keyframes popIn{
+  from{opacity:0;transform:scale(.9) translateY(20px)}
+  to{opacity:1;transform:scale(1) translateY(0)}
+}
+.daily-popup::before{
+  content:'';position:absolute;top:0;left:0;right:0;height:4px;
+  background:linear-gradient(90deg,var(--accent),#8b5cf6,#ec4899);
+}
+.daily-popup-date{
+  font-size:12px;color:var(--dim);margin-bottom:18px;
+  letter-spacing:.5px;font-weight:600;
+}
+.daily-popup-section{margin-bottom:18px}
+.daily-popup-section:last-of-type{margin-bottom:6px}
+.daily-popup-label{
+  font-size:11px;color:var(--dim);margin-bottom:8px;font-weight:600;
+}
+.daily-popup-text{
+  font-size:16px;line-height:1.85;color:var(--text);
+  margin-bottom:6px;
+}
+.daily-popup-source{
+  font-size:12px;color:var(--dim);text-align:right;
+}
+.daily-popup-close{
+  margin-top:20px;width:100%;
+  padding:12px;border-radius:12px;
+  border:none;background:var(--accent);color:#fff;
+  font-size:14px;font-weight:600;cursor:pointer;font-family:inherit;
+  transition:.15s;
+}
+.daily-popup-close:hover{opacity:.88}
 </style>
 </head>
 <body>
@@ -282,112 +325,112 @@ try {
 
 /* --- 苏轼作品（105 条） --- */
 const SU_SHI = [
-  { t: '竹杖芒鞋轻胜马，谁怕？一蓑烟雨任平生。', s: '《定风波·莫听穿林打叶声》' },
-  { t: '回首向来萧瑟处，归去，也无风雨也无晴。', s: '《定风波·莫听穿林打叶声》' },
-  { t: '莫听穿林打叶声，何妨吟啸且徐行。', s: '《定风波·莫听穿林打叶声》' },
-  { t: '料峭春风吹酒醒，微冷，山头斜照却相迎。', s: '《定风波·莫听穿林打叶声》' },
-  { t: '人生如逆旅，我亦是行人。', s: '《临江仙·送钱穆父》' },
-  { t: '一别都门三改火，天涯踏尽红尘。', s: '《临江仙·送钱穆父》' },
-  { t: '尊前不用翠眉颦。', s: '《临江仙·送钱穆父》' },
-  { t: '惆怅孤帆连夜发，送行淡月微云。', s: '《临江仙·送钱穆父》' },
-  { t: '但愿人长久，千里共婵娟。', s: '《水调歌头·明月几时有》' },
-  { t: '人有悲欢离合，月有阴晴圆缺，此事古难全。', s: '《水调歌头·明月几时有》' },
-  { t: '明月几时有，把酒问青天。', s: '《水调歌头·明月几时有》' },
-  { t: '我欲乘风归去，又恐琼楼玉宇，高处不胜寒。', s: '《水调歌头·明月几时有》' },
-  { t: '起舞弄清影，何似在人间。', s: '《水调歌头·明月几时有》' },
-  { t: '转朱阁，低绮户，照无眠。', s: '《水调歌头·明月几时有》' },
-  { t: '不应有恨，何事长向别时圆。', s: '《水调歌头·明月几时有》' },
-  { t: '大江东去，浪淘尽，千古风流人物。', s: '《念奴娇·赤壁怀古》' },
-  { t: '乱石穿空，惊涛拍岸，卷起千堆雪。', s: '《念奴娇·赤壁怀古》' },
-  { t: '江山如画，一时多少豪杰。', s: '《念奴娇·赤壁怀古》' },
-  { t: '遥想公瑾当年，小乔初嫁了，雄姿英发。', s: '《念奴娇·赤壁怀古》' },
-  { t: '羽扇纶巾，谈笑间、樯橹灰飞烟灭。', s: '《念奴娇·赤壁怀古》' },
-  { t: '人生如梦，一尊还酹江月。', s: '《念奴娇·赤壁怀古》' },
-  { t: '十年生死两茫茫，不思量，自难忘。', s: '《江城子·乙卯正月二十日夜记梦》' },
-  { t: '千里孤坟，无处话凄凉。', s: '《江城子·乙卯正月二十日夜记梦》' },
-  { t: '纵使相逢应不识，尘满面，鬓如霜。', s: '《江城子·乙卯正月二十日夜记梦》' },
-  { t: '夜来幽梦忽还乡，小轩窗，正梳妆。', s: '《江城子·乙卯正月二十日夜记梦》' },
-  { t: '相顾无言，惟有泪千行。', s: '《江城子·乙卯正月二十日夜记梦》' },
-  { t: '料得年年肠断处，明月夜，短松冈。', s: '《江城子·乙卯正月二十日夜记梦》' },
-  { t: '老夫聊发少年狂，左牵黄，右擎苍。', s: '《江城子·密州出猎》' },
-  { t: '酒酣胸胆尚开张，鬓微霜，又何妨。', s: '《江城子·密州出猎》' },
-  { t: '会挽雕弓如满月，西北望，射天狼。', s: '《江城子·密州出猎》' },
-  { t: '持节云中，何日遣冯唐。', s: '《江城子·密州出猎》' },
-  { t: '花褪残红青杏小。燕子飞时，绿水人家绕。', s: '《蝶恋花·春景》' },
-  { t: '枝上柳绵吹又少，天涯何处无芳草。', s: '《蝶恋花·春景》' },
-  { t: '墙里秋千墙外道。墙外行人，墙里佳人笑。', s: '《蝶恋花·春景》' },
-  { t: '笑渐不闻声渐悄，多情却被无情恼。', s: '《蝶恋花·春景》' },
-  { t: '谁道人生无再少？门前流水尚能西。', s: '《浣溪沙·游蕲水清泉寺》' },
-  { t: '休将白发唱黄鸡。', s: '《浣溪沙·游蕲水清泉寺》' },
-  { t: '山下兰芽短浸溪，松间沙路净无泥。', s: '《浣溪沙·游蕲水清泉寺》' },
-  { t: '横看成岭侧成峰，远近高低各不同。', s: '《题西林壁》' },
-  { t: '不识庐山真面目，只缘身在此山中。', s: '《题西林壁》' },
-  { t: '水光潋滟晴方好，山色空蒙雨亦奇。', s: '《饮湖上初晴后雨》' },
-  { t: '欲把西湖比西子，淡妆浓抹总相宜。', s: '《饮湖上初晴后雨》' },
-  { t: '荷尽已无擎雨盖，菊残犹有傲霜枝。', s: '《赠刘景文》' },
-  { t: '一年好景君须记，最是橙黄橘绿时。', s: '《赠刘景文》' },
-  { t: '人生到处知何似，应似飞鸿踏雪泥。', s: '《和子由渑池怀旧》' },
-  { t: '泥上偶然留指爪，鸿飞那复计东西。', s: '《和子由渑池怀旧》' },
-  { t: '老僧已死成新塔，坏壁无由见旧题。', s: '《和子由渑池怀旧》' },
-  { t: '往日崎岖还记否，路长人困蹇驴嘶。', s: '《和子由渑池怀旧》' },
-  { t: '拣尽寒枝不肯栖，寂寞沙洲冷。', s: '《卜算子·黄州定慧院寓居作》' },
-  { t: '缺月挂疏桐，漏断人初静。', s: '《卜算子·黄州定慧院寓居作》' },
-  { t: '谁见幽人独往来，缥缈孤鸿影。', s: '《卜算子·黄州定慧院寓居作》' },
-  { t: '惊起却回头，有恨无人省。', s: '《卜算子·黄州定慧院寓居作》' },
-  { t: '小舟从此逝，江海寄余生。', s: '《临江仙·夜饮东坡醒复醉》' },
-  { t: '长恨此身非我有，何时忘却营营。', s: '《临江仙·夜饮东坡醒复醉》' },
-  { t: '夜阑风静縠纹平。', s: '《临江仙·夜饮东坡醒复醉》' },
-  { t: '夜饮东坡醒复醉，归来仿佛三更。', s: '《临江仙·夜饮东坡醒复醉》' },
-  { t: '家童鼻息已雷鸣，敲门都不应，倚杖听江声。', s: '《临江仙·夜饮东坡醒复醉》' },
-  { t: '惆怅东栏一株雪，人生看得几清明。', s: '《东栏梨花》' },
-  { t: '梨花淡白柳深青，柳絮飞时花满城。', s: '《东栏梨花》' },
-  { t: '春宵一刻值千金，花有清香月有阴。', s: '《春宵》' },
-  { t: '歌管楼台声细细，秋千院落夜沉沉。', s: '《春宵》' },
-  { t: '人皆养子望聪明，我被聪明误一生。', s: '《洗儿戏作》' },
-  { t: '但愿孩儿愚且鲁，无灾无难到公卿。', s: '《洗儿戏作》' },
-  { t: '宁可食无肉，不可居无竹。', s: '《於潜僧绿筠轩》' },
-  { t: '无肉令人瘦，无竹令人俗。', s: '《於潜僧绿筠轩》' },
-  { t: '人瘦尚可肥，士俗不可医。', s: '《於潜僧绿筠轩》' },
-  { t: '粗缯大布裹生涯，腹有诗书气自华。', s: '《和董传留别》' },
-  { t: '人似秋鸿来有信，事如春梦了无痕。', s: '《正月二十日与潘郭二生出郊寻春》' },
-  { t: '人生识字忧患始。', s: '《石苍舒醉墨堂》' },
-  { t: '我书意造本无法，点画信手烦推求。', s: '《石苍舒醉墨堂》' },
-  { t: '竹外桃花三两枝，春江水暖鸭先知。', s: '《惠崇春江晚景》' },
-  { t: '蒌蒿满地芦芽短，正是河豚欲上时。', s: '《惠崇春江晚景》' },
-  { t: '试问岭南应不好，却道：此心安处是吾乡。', s: '《定风波·南海归赠王定国侍人寓娘》' },
-  { t: '万里归来颜愈少，微笑，笑时犹带岭梅香。', s: '《定风波·南海归赠王定国侍人寓娘》' },
-  { t: '休对故人思故国，且将新火试新茶。诗酒趁年华。', s: '《望江南·超然台作》' },
-  { t: '春未老，风细柳斜斜。', s: '《望江南·超然台作》' },
-  { t: '半壕春水一城花。', s: '《望江南·超然台作》' },
-  { t: '烟雨暗千家。', s: '《望江南·超然台作》' },
-  { t: '浮名浮利，虚苦劳神。', s: '《行香子·述怀》' },
-  { t: '且陶陶、乐尽天真。', s: '《行香子·述怀》' },
-  { t: '几时归去，作个闲人。对一张琴，一壶酒，一溪云。', s: '《行香子·述怀》' },
-  { t: '虽抱文章，开口谁亲。', s: '《行香子·述怀》' },
-  { t: '清夜无尘，月色如银。', s: '《行香子·述怀》' },
-  { t: '酒斟时、须满十分。', s: '《行香子·述怀》' },
-  { t: '何夜无月？何处无竹柏？但少闲人如吾两人者耳。', s: '《记承天寺夜游》' },
-  { t: '庭下如积水空明，水中藻、荇交横，盖竹柏影也。', s: '《记承天寺夜游》' },
-  { t: '元丰六年十月十二日夜，解衣欲睡，月色入户，欣然起行。', s: '《记承天寺夜游》' },
-  { t: '寄蜉蝣于天地，渺沧海之一粟。', s: '《前赤壁赋》' },
-  { t: '哀吾生之须臾，羡长江之无穷。', s: '《前赤壁赋》' },
-  { t: '挟飞仙以遨游，抱明月而长终。', s: '《前赤壁赋》' },
-  { t: '逝者如斯，而未尝往也；盈虚者如彼，而卒莫消长也。', s: '《前赤壁赋》' },
-  { t: '自其变者而观之，则天地曾不能以一瞬。', s: '《前赤壁赋》' },
-  { t: '自其不变者而观之，则物与我皆无尽也。', s: '《前赤壁赋》' },
-  { t: '惟江上之清风，与山间之明月，耳得之而为声，目遇之而成色。', s: '《前赤壁赋》' },
-  { t: '取之无禁，用之不竭。', s: '《前赤壁赋》' },
-  { t: '清风徐来，水波不兴。', s: '《前赤壁赋》' },
-  { t: '白露横江，水光接天。', s: '《前赤壁赋》' },
-  { t: '纵一苇之所如，凌万顷之茫然。', s: '《前赤壁赋》' },
-  { t: '浩浩乎如冯虚御风，而不知其所止。', s: '《前赤壁赋》' },
-  { t: '飘飘乎如遗世独立，羽化而登仙。', s: '《前赤壁赋》' },
-  { t: '博观而约取，厚积而薄发。', s: '《稼说送张琥》' },
-  { t: '古之立大事者，不惟有超世之才，亦必有坚忍不拔之志。', s: '《晁错论》' },
-  { t: '一点浩然气，千里快哉风。', s: '《水调歌头·黄州快哉亭赠张偓佺》' },
-  { t: '万事到头都是梦，休嗟百计不如人。', s: '《南乡子·重九涵辉楼呈徐君猷》' },
-  { t: '明日黄花蝶也愁。', s: '《南乡子·重九涵辉楼呈徐君猷》' },
-  { t: '休言万事转头空，未转头时皆梦。', s: '《西江月·平山堂》' }
+  { t: '竹杖芒鞋轻胜马，谁怕？一蓑烟雨任平生。', s: '苏轼《定风波·莫听穿林打叶声》' },
+  { t: '回首向来萧瑟处，归去，也无风雨也无晴。', s: '苏轼《定风波·莫听穿林打叶声》' },
+  { t: '莫听穿林打叶声，何妨吟啸且徐行。', s: '苏轼《定风波·莫听穿林打叶声》' },
+  { t: '料峭春风吹酒醒，微冷，山头斜照却相迎。', s: '苏轼《定风波·莫听穿林打叶声》' },
+  { t: '人生如逆旅，我亦是行人。', s: '苏轼《临江仙·送钱穆父》' },
+  { t: '一别都门三改火，天涯踏尽红尘。', s: '苏轼《临江仙·送钱穆父》' },
+  { t: '尊前不用翠眉颦。', s: '苏轼《临江仙·送钱穆父》' },
+  { t: '惆怅孤帆连夜发，送行淡月微云。', s: '苏轼《临江仙·送钱穆父》' },
+  { t: '但愿人长久，千里共婵娟。', s: '苏轼《水调歌头·明月几时有》' },
+  { t: '人有悲欢离合，月有阴晴圆缺，此事古难全。', s: '苏轼《水调歌头·明月几时有》' },
+  { t: '明月几时有，把酒问青天。', s: '苏轼《水调歌头·明月几时有》' },
+  { t: '我欲乘风归去，又恐琼楼玉宇，高处不胜寒。', s: '苏轼《水调歌头·明月几时有》' },
+  { t: '起舞弄清影，何似在人间。', s: '苏轼《水调歌头·明月几时有》' },
+  { t: '转朱阁，低绮户，照无眠。', s: '苏轼《水调歌头·明月几时有》' },
+  { t: '不应有恨，何事长向别时圆。', s: '苏轼《水调歌头·明月几时有》' },
+  { t: '大江东去，浪淘尽，千古风流人物。', s: '苏轼《念奴娇·赤壁怀古》' },
+  { t: '乱石穿空，惊涛拍岸，卷起千堆雪。', s: '苏轼《念奴娇·赤壁怀古》' },
+  { t: '江山如画，一时多少豪杰。', s: '苏轼《念奴娇·赤壁怀古》' },
+  { t: '遥想公瑾当年，小乔初嫁了，雄姿英发。', s: '苏轼《念奴娇·赤壁怀古》' },
+  { t: '羽扇纶巾，谈笑间、樯橹灰飞烟灭。', s: '苏轼《念奴娇·赤壁怀古》' },
+  { t: '人生如梦，一尊还酹江月。', s: '苏轼《念奴娇·赤壁怀古》' },
+  { t: '十年生死两茫茫，不思量，自难忘。', s: '苏轼《江城子·乙卯正月二十日夜记梦》' },
+  { t: '千里孤坟，无处话凄凉。', s: '苏轼《江城子·乙卯正月二十日夜记梦》' },
+  { t: '纵使相逢应不识，尘满面，鬓如霜。', s: '苏轼《江城子·乙卯正月二十日夜记梦》' },
+  { t: '夜来幽梦忽还乡，小轩窗，正梳妆。', s: '苏轼《江城子·乙卯正月二十日夜记梦》' },
+  { t: '相顾无言，惟有泪千行。', s: '苏轼《江城子·乙卯正月二十日夜记梦》' },
+  { t: '料得年年肠断处，明月夜，短松冈。', s: '苏轼《江城子·乙卯正月二十日夜记梦》' },
+  { t: '老夫聊发少年狂，左牵黄，右擎苍。', s: '苏轼《江城子·密州出猎》' },
+  { t: '酒酣胸胆尚开张，鬓微霜，又何妨。', s: '苏轼《江城子·密州出猎》' },
+  { t: '会挽雕弓如满月，西北望，射天狼。', s: '苏轼《江城子·密州出猎》' },
+  { t: '持节云中，何日遣冯唐。', s: '苏轼《江城子·密州出猎》' },
+  { t: '花褪残红青杏小。燕子飞时，绿水人家绕。', s: '苏轼《蝶恋花·春景》' },
+  { t: '枝上柳绵吹又少，天涯何处无芳草。', s: '苏轼《蝶恋花·春景》' },
+  { t: '墙里秋千墙外道。墙外行人，墙里佳人笑。', s: '苏轼《蝶恋花·春景》' },
+  { t: '笑渐不闻声渐悄，多情却被无情恼。', s: '苏轼《蝶恋花·春景》' },
+  { t: '谁道人生无再少？门前流水尚能西。', s: '苏轼《浣溪沙·游蕲水清泉寺》' },
+  { t: '休将白发唱黄鸡。', s: '苏轼《浣溪沙·游蕲水清泉寺》' },
+  { t: '山下兰芽短浸溪，松间沙路净无泥。', s: '苏轼《浣溪沙·游蕲水清泉寺》' },
+  { t: '横看成岭侧成峰，远近高低各不同。', s: '苏轼《题西林壁》' },
+  { t: '不识庐山真面目，只缘身在此山中。', s: '苏轼《题西林壁》' },
+  { t: '水光潋滟晴方好，山色空蒙雨亦奇。', s: '苏轼《饮湖上初晴后雨》' },
+  { t: '欲把西湖比西子，淡妆浓抹总相宜。', s: '苏轼《饮湖上初晴后雨》' },
+  { t: '荷尽已无擎雨盖，菊残犹有傲霜枝。', s: '苏轼《赠刘景文》' },
+  { t: '一年好景君须记，最是橙黄橘绿时。', s: '苏轼《赠刘景文》' },
+  { t: '人生到处知何似，应似飞鸿踏雪泥。', s: '苏轼《和子由渑池怀旧》' },
+  { t: '泥上偶然留指爪，鸿飞那复计东西。', s: '苏轼《和子由渑池怀旧》' },
+  { t: '老僧已死成新塔，坏壁无由见旧题。', s: '苏轼《和子由渑池怀旧》' },
+  { t: '往日崎岖还记否，路长人困蹇驴嘶。', s: '苏轼《和子由渑池怀旧》' },
+  { t: '拣尽寒枝不肯栖，寂寞沙洲冷。', s: '苏轼《卜算子·黄州定慧院寓居作》' },
+  { t: '缺月挂疏桐，漏断人初静。', s: '苏轼《卜算子·黄州定慧院寓居作》' },
+  { t: '谁见幽人独往来，缥缈孤鸿影。', s: '苏轼《卜算子·黄州定慧院寓居作》' },
+  { t: '惊起却回头，有恨无人省。', s: '苏轼《卜算子·黄州定慧院寓居作》' },
+  { t: '小舟从此逝，江海寄余生。', s: '苏轼《临江仙·夜饮东坡醒复醉》' },
+  { t: '长恨此身非我有，何时忘却营营。', s: '苏轼《临江仙·夜饮东坡醒复醉》' },
+  { t: '夜阑风静縠纹平。', s: '苏轼《临江仙·夜饮东坡醒复醉》' },
+  { t: '夜饮东坡醒复醉，归来仿佛三更。', s: '苏轼《临江仙·夜饮东坡醒复醉》' },
+  { t: '家童鼻息已雷鸣，敲门都不应，倚杖听江声。', s: '苏轼《临江仙·夜饮东坡醒复醉》' },
+  { t: '惆怅东栏一株雪，人生看得几清明。', s: '苏轼《东栏梨花》' },
+  { t: '梨花淡白柳深青，柳絮飞时花满城。', s: '苏轼《东栏梨花》' },
+  { t: '春宵一刻值千金，花有清香月有阴。', s: '苏轼《春宵》' },
+  { t: '歌管楼台声细细，秋千院落夜沉沉。', s: '苏轼《春宵》' },
+  { t: '人皆养子望聪明，我被聪明误一生。', s: '苏轼《洗儿戏作》' },
+  { t: '但愿孩儿愚且鲁，无灾无难到公卿。', s: '苏轼《洗儿戏作》' },
+  { t: '宁可食无肉，不可居无竹。', s: '苏轼《於潜僧绿筠轩》' },
+  { t: '无肉令人瘦，无竹令人俗。', s: '苏轼《於潜僧绿筠轩》' },
+  { t: '人瘦尚可肥，士俗不可医。', s: '苏轼《於潜僧绿筠轩》' },
+  { t: '粗缯大布裹生涯，腹有诗书气自华。', s: '苏轼《和董传留别》' },
+  { t: '人似秋鸿来有信，事如春梦了无痕。', s: '苏轼《正月二十日与潘郭二生出郊寻春》' },
+  { t: '人生识字忧患始。', s: '苏轼《石苍舒醉墨堂》' },
+  { t: '我书意造本无法，点画信手烦推求。', s: '苏轼《石苍舒醉墨堂》' },
+  { t: '竹外桃花三两枝，春江水暖鸭先知。', s: '苏轼《惠崇春江晚景》' },
+  { t: '蒌蒿满地芦芽短，正是河豚欲上时。', s: '苏轼《惠崇春江晚景》' },
+  { t: '试问岭南应不好，却道：此心安处是吾乡。', s: '苏轼《定风波·南海归赠王定国侍人寓娘》' },
+  { t: '万里归来颜愈少，微笑，笑时犹带岭梅香。', s: '苏轼《定风波·南海归赠王定国侍人寓娘》' },
+  { t: '休对故人思故国，且将新火试新茶。诗酒趁年华。', s: '苏轼《望江南·超然台作》' },
+  { t: '春未老，风细柳斜斜。', s: '苏轼《望江南·超然台作》' },
+  { t: '半壕春水一城花。', s: '苏轼《望江南·超然台作》' },
+  { t: '烟雨暗千家。', s: '苏轼《望江南·超然台作》' },
+  { t: '浮名浮利，虚苦劳神。', s: '苏轼《行香子·述怀》' },
+  { t: '且陶陶、乐尽天真。', s: '苏轼《行香子·述怀》' },
+  { t: '几时归去，作个闲人。对一张琴，一壶酒，一溪云。', s: '苏轼《行香子·述怀》' },
+  { t: '虽抱文章，开口谁亲。', s: '苏轼《行香子·述怀》' },
+  { t: '清夜无尘，月色如银。', s: '苏轼《行香子·述怀》' },
+  { t: '酒斟时、须满十分。', s: '苏轼《行香子·述怀》' },
+  { t: '何夜无月？何处无竹柏？但少闲人如吾两人者耳。', s: '苏轼《记承天寺夜游》' },
+  { t: '庭下如积水空明，水中藻、荇交横，盖竹柏影也。', s: '苏轼《记承天寺夜游》' },
+  { t: '元丰六年十月十二日夜，解衣欲睡，月色入户，欣然起行。', s: '苏轼《记承天寺夜游》' },
+  { t: '寄蜉蝣于天地，渺沧海之一粟。', s: '苏轼《前赤壁赋》' },
+  { t: '哀吾生之须臾，羡长江之无穷。', s: '苏轼《前赤壁赋》' },
+  { t: '挟飞仙以遨游，抱明月而长终。', s: '苏轼《前赤壁赋》' },
+  { t: '逝者如斯，而未尝往也；盈虚者如彼，而卒莫消长也。', s: '苏轼《前赤壁赋》' },
+  { t: '自其变者而观之，则天地曾不能以一瞬。', s: '苏轼《前赤壁赋》' },
+  { t: '自其不变者而观之，则物与我皆无尽也。', s: '苏轼《前赤壁赋》' },
+  { t: '惟江上之清风，与山间之明月，耳得之而为声，目遇之而成色。', s: '苏轼《前赤壁赋》' },
+  { t: '取之无禁，用之不竭。', s: '苏轼《前赤壁赋》' },
+  { t: '清风徐来，水波不兴。', s: '苏轼《前赤壁赋》' },
+  { t: '白露横江，水光接天。', s: '苏轼《前赤壁赋》' },
+  { t: '纵一苇之所如，凌万顷之茫然。', s: '苏轼《前赤壁赋》' },
+  { t: '浩浩乎如冯虚御风，而不知其所止。', s: '苏轼《前赤壁赋》' },
+  { t: '飘飘乎如遗世独立，羽化而登仙。', s: '苏轼《前赤壁赋》' },
+  { t: '博观而约取，厚积而薄发。', s: '苏轼《稼说送张琥》' },
+  { t: '古之立大事者，不惟有超世之才，亦必有坚忍不拔之志。', s: '苏轼《晁错论》' },
+  { t: '一点浩然气，千里快哉风。', s: '苏轼《水调歌头·黄州快哉亭赠张偓佺》' },
+  { t: '万事到头都是梦，休嗟百计不如人。', s: '苏轼《南乡子·重九涵辉楼呈徐君猷》' },
+  { t: '明日黄花蝶也愁。', s: '苏轼《南乡子·重九涵辉楼呈徐君猷》' },
+  { t: '休言万事转头空，未转头时皆梦。', s: '苏轼《西江月·平山堂》' }
 ];
 
 /* --- INTP 名言（120 条） --- */
@@ -614,27 +657,32 @@ const LYRICS = [
   { t: '天公爵微倾 洒下一壶酒', s: '绯村柯北《天命风流》' }
 ];
 
-/* 每个池子的大小 */
-const POOLS = {
-  poem: { list: SU_SHI, label: '诗词', credit: '苏轼' },
-  lyric: { list: LYRICS, label: '歌词', credit: '' },
-  quote: { list: QUOTES, label: '名言', credit: '' }
-};
+/* 两个独立池子 */
+const POOL_LYRIC = { list: LYRICS };
+const POOL_QUOTE = { list: [...SU_SHI, ...QUOTES] };
 
-/* 抽取逻辑：从三个池子里挑一个，再从这个池子里随机选一条未用过的 */
-function drawOne(usedSet) {
-  // 合并所有池子的索引 [poolType, idx]
-  const all = [];
-  for (const key of Object.keys(POOLS)) {
-    const list = POOLS[key].list;
-    for (let i = 0; i < list.length; i++) {
-      const k = key + ':' + i;
-      if (!usedSet.has(k)) all.push({ pool: key, idx: i, key: k });
-    }
+/* 从池子随机抽一条不重复 */
+function drawFromPool(poolType, usedKeys) {
+  let baseList;
+  if (poolType === 'lyric') {
+    baseList = [...POOL_LYRIC.list, ...state.customPool.lyric];
+  } else if (poolType === 'quote') {
+    baseList = [...POOL_QUOTE.list, ...state.customPool.quote];
+  } else {
+    return null;
   }
-  if (!all.length) return null;
-  const pick = all[Math.floor(Math.random() * all.length)];
-  return pick;
+  const candidates = [];
+  for (let i = 0; i < baseList.length; i++) {
+    const k = poolType + ':' + i;
+    if (!usedKeys.has(k)) candidates.push({ idx: i, key: k, ...baseList[i] });
+  }
+  if (!candidates.length) {
+    // 全部用过，重置（返回全池随机）
+    const all = baseList.map((item, i) => ({ idx: i, key: poolType + ':' + i, ...item }));
+    if (!all.length) return null;
+    return all[Math.floor(Math.random() * all.length)];
+  }
+  return candidates[Math.floor(Math.random() * candidates.length)];
 }
 
 /* ==================== 工具函数 ==================== */
@@ -684,11 +732,6 @@ function download(filename, content, type) {
   a.click();
   URL.revokeObjectURL(a.href);
 }
-function neteaseSearchUrl(songTitle) {
-  // 只取歌名部分搜索（如果有 - 歌手，取前面）
-  const title = songTitle.split(' - ')[0].split('|')[0].trim();
-  return 'https://music.163.com/#/search/m/?s=' + encodeURIComponent(title) + '&type=1';
-}
 function copyText(text) {
   if (navigator.clipboard && navigator.clipboard.writeText) {
     return navigator.clipboard.writeText(text).then(() => toast('已复制')).catch(() => fallbackCopy(text));
@@ -706,22 +749,11 @@ function fallbackCopy(text) {
   catch (e) { toast('复制失败'); }
   ta.remove();
 }
-function splitSong(line) {
-  line = line.trim();
-  if (!line) return null;
-  // 支持 " - " 和 "|" 分隔
-  let name = line, singer = '';
-  const idx1 = line.indexOf(' - ');
-  const idx2 = line.indexOf('|');
-  if (idx1 > 0) { name = line.slice(0, idx1).trim(); singer = line.slice(idx1 + 3).trim(); }
-  else if (idx2 > 0) { name = line.slice(0, idx2).trim(); singer = line.slice(idx2 + 1).trim(); }
-  if (!name) return null;
-  return singer ? `${name} - ${singer}` : name;
-}
 
 /* ==================== 状态与持久化 ==================== */
 const STORE_KEY = 'life_dashboard_v1';
-const PICK_RECENT_DAYS = 45;  // 一个池子最近多少天不重复
+const PICK_RECENT_DAYS = 45;
+const POPUP_KEY = 'life_dashboard_popup_date';
 
 function defaultState() {
   return {
@@ -749,10 +781,9 @@ function defaultState() {
     daySchedules: {},
     logs: {},
     entries: [],
-    songList: [],       // 歌名数组 "歌名 - 歌手"
-    dailySongs: {},     // { "2026-10-11": "歌名 - 歌手" }
-    dailyPicks: {},     // { "2026-10-11": { pool:'poem'|'lyric'|'quote', idx, text, source } }
-    customPool: { poem: [], lyric: [], quote: [] }  // 用户自己添加的
+    dailyLyric: {},   // { "2026-10-11": { text, source } }
+    dailyQuote: {},   // { "2026-10-11": { text, source } }
+    customPool: { lyric: [], quote: [] }
   };
 }
 
@@ -773,16 +804,17 @@ function loadState() {
       s.daySchedules = s.daySchedules || {};
       s.logs = s.logs || {};
       s.entries = s.entries || [];
-      s.songList = Array.isArray(s.songList) ? s.songList : [];
-      s.dailySongs = s.dailySongs || {};
-      s.dailyPicks = s.dailyPicks || {};
-      s.customPool = s.customPool || { poem: [], lyric: [], quote: [] };
-      if (!Array.isArray(s.customPool.poem)) s.customPool.poem = [];
+      s.dailyLyric = s.dailyLyric || {};
+      s.dailyQuote = s.dailyQuote || {};
+      s.customPool = s.customPool || { lyric: [], quote: [] };
       if (!Array.isArray(s.customPool.lyric)) s.customPool.lyric = [];
       if (!Array.isArray(s.customPool.quote)) s.customPool.quote = [];
+      // 清理旧数据
       delete s.songs;
-      delete s.dailyPoems;
-      delete s.dailyLyrics;
+      delete s.songList;
+      delete s.dailySongs;
+      delete s.dailyPicks;
+      if (s.customPool.poem) delete s.customPool.poem;
       return s;
     }
   } catch (e) { console.error(e); }
@@ -799,97 +831,91 @@ function save() {
 }
 
 /* ==================== 每日抽取 ==================== */
-function getFullPool(poolType) {
-  const base = POOLS[poolType].list;
-  const custom = (state.customPool && state.customPool[poolType]) || [];
-  return [...base, ...custom];
-}
-
-function getAllPoolEntries() {
-  const out = [];
-  for (const key of Object.keys(POOLS)) {
-    const list = getFullPool(key);
-    for (let i = 0; i < list.length; i++) {
-      out.push({ pool: key, idx: i, key: key + ':' + i, ...list[i] });
-    }
-  }
-  return out;
-}
-
-function drawOne() {
-  const all = getAllPoolEntries();
-  if (!all.length) return null;
-  // 收集最近 PICK_RECENT_DAYS 天用过的 key
+function collectUsedKeys(poolType, record) {
   const used = new Set();
-  const dates = Object.keys(state.dailyPicks).sort();
-  const recentDates = dates.slice(-PICK_RECENT_DAYS);
-  recentDates.forEach(d => {
-    const p = state.dailyPicks[d];
+  const dates = Object.keys(record).sort();
+  const recent = dates.slice(-PICK_RECENT_DAYS);
+  recent.forEach(d => {
+    const p = record[d];
     if (p && p.poolKey) used.add(p.poolKey);
   });
-  // 候选
-  let candidates = all.filter(x => !used.has(x.key));
-  if (!candidates.length) candidates = all; // 池子用尽，重置
-  const pick = candidates[Math.floor(Math.random() * candidates.length)];
-  return pick;
+  return used;
 }
 
-function ensureTodayPick() {
+function ensureTodayLyric() {
   const today = todayStr();
-  if (state.dailyPicks[today]) return;
-  const pick = drawOne();
+  if (state.dailyLyric[today]) return;
+  const used = collectUsedKeys('lyric', state.dailyLyric);
+  const pick = drawFromPool('lyric', used);
   if (!pick) return;
-  state.dailyPicks[today] = {
-    pool: pick.pool,
-    idx: pick.idx,
-    poolKey: pick.key,
+  state.dailyLyric[today] = {
     text: pick.t,
-    source: pick.s
+    source: pick.s,
+    poolKey: pick.key
   };
   save();
 }
 
-function getTodayPick() {
+function ensureTodayQuote() {
   const today = todayStr();
-  return state.dailyPicks[today] || null;
-}
-
-function getPickForDate(dateStr) {
-  return state.dailyPicks[dateStr] || null;
-}
-
-/* ==================== 歌单 ==================== */
-function pickSongByDate(dateStr) {
-  if (!state.songList.length) return null;
-  let hash = 0;
-  for (let i = 0; i < dateStr.length; i++) {
-    hash = ((hash << 5) - hash + dateStr.charCodeAt(i)) | 0;
-  }
-  return state.songList[Math.abs(hash) % state.songList.length];
-}
-
-function getTodaySong() {
-  if (!state.songList.length) return null;
-  const today = todayStr();
-  const rec = state.dailySongs[today];
-  if (rec) return rec;
-  return pickSongByDate(today);
-}
-
-function ensureTodaySongRecorded() {
-  if (!state.songList.length) return;
-  const today = todayStr();
-  if (state.dailySongs[today]) return;
-  const title = pickSongByDate(today);
-  if (!title) return;
-  state.dailySongs[today] = title;
+  if (state.dailyQuote[today]) return;
+  const used = collectUsedKeys('quote', state.dailyQuote);
+  const pick = drawFromPool('quote', used);
+  if (!pick) return;
+  state.dailyQuote[today] = {
+    text: pick.t,
+    source: pick.s,
+    poolKey: pick.key
+  };
   save();
 }
 
-function getSongForDate(dateStr) {
-  if (state.dailySongs[dateStr]) return state.dailySongs[dateStr];
-  if (!state.songList.length) return null;
-  return pickSongByDate(dateStr);
+function getLyricForDate(d) { return state.dailyLyric[d] || null; }
+function getQuoteForDate(d) { return state.dailyQuote[d] || null; }
+
+/* ==================== 每日弹窗 ==================== */
+function showDailyPopup() {
+  const today = todayStr();
+  if (localStorage.getItem(POPUP_KEY) === today) return;
+  const lyric = getLyricForDate(today);
+  const quote = getQuoteForDate(today);
+  if (!lyric && !quote) return;
+
+  const d = parseDate(today);
+  const dateLabel = `${today} ${WEEK_NAMES[d.getDay()]}`;
+
+  const mask = document.createElement('div');
+  mask.className = 'daily-popup-mask';
+  mask.innerHTML = `
+    <div class="daily-popup">
+      <div class="daily-popup-date">${dateLabel}</div>
+      ${lyric ? `
+        <div class="daily-popup-section">
+          <div class="daily-popup-label">🎵 今日歌曲</div>
+          <div class="daily-popup-text">${esc(lyric.text)}</div>
+          <div class="daily-popup-source">—— ${esc(lyric.source)}</div>
+        </div>
+      ` : ''}
+      ${quote ? `
+        <div class="daily-popup-section">
+          <div class="daily-popup-label">✨ 今日一句</div>
+          <div class="daily-popup-text">${esc(quote.text)}</div>
+          <div class="daily-popup-source">—— ${esc(quote.source)}</div>
+        </div>
+      ` : ''}
+      <button class="daily-popup-close" id="dailyPopupClose">知道了</button>
+    </div>
+  `;
+  document.body.appendChild(mask);
+
+  const close = () => {
+    localStorage.setItem(POPUP_KEY, today);
+    mask.style.transition = 'opacity .2s';
+    mask.style.opacity = '0';
+    setTimeout(() => mask.remove(), 200);
+  };
+  $('#dailyPopupClose', mask).onclick = close;
+  mask.addEventListener('click', e => { if (e.target === mask) close(); });
 }
 
 /* ==================== 外观应用 ==================== */
@@ -1352,8 +1378,8 @@ function renderLog(app) {
   const totalMin = dayEntries.reduce((s, e) => s + e.duration, 0);
   const logContent = state.logs[viewDate] || '';
 
-  const song = getSongForDate(viewDate);
-  const pick = getPickForDate(viewDate);
+  const lyric = getLyricForDate(viewDate);
+  const quote = getQuoteForDate(viewDate);
 
   const modOptions = mods.map(m => `<option value="${m.id}">${esc(m.name)}</option>`).join('');
 
@@ -1412,8 +1438,8 @@ function renderLog(app) {
       <textarea id="logArea" placeholder="今天发生了什么？感受如何？有什么想法？">${esc(logContent)}</textarea>
       <div class="muted" style="margin-top:8px" id="logStatus">${logContent ? '已保存' : ''}</div>
       <div class="day-meta">
-        ${song ? `<div class="day-meta-item">🎵 <b>${esc(song)}</b></div>` : ''}
-        ${pick ? `<div class="day-meta-item">📜 ${esc(pick.text)}<br><span style="font-size:12px">—— ${esc(pick.source)}</span></div>` : ''}
+        ${lyric ? `<div class="day-meta-item">🎵 ${esc(lyric.text)}<br><span style="font-size:12px">—— ${esc(lyric.source)}</span></div>` : ''}
+        ${quote ? `<div class="day-meta-item">✨ ${esc(quote.text)}<br><span style="font-size:12px">—— ${esc(quote.source)}</span></div>` : ''}
       </div>
     </div>
   `;
@@ -1869,17 +1895,15 @@ function openModuleModal(id) {
 /* ==================== 每日页 ==================== */
 function renderDaily(app) {
   const today = todayStr();
-  const song = getTodaySong();
-  const pick = getTodayPick();
+  const lyric = getLyricForDate(today);
+  const quote = getQuoteForDate(today);
 
-  const songCount = state.songList.length;
-  const poemCount = POOLS.poem.list.length + state.customPool.poem.length;
-  const lyricCount = POOLS.lyric.list.length + state.customPool.lyric.length;
-  const quoteCount = POOLS.quote.list.length + state.customPool.quote.length;
+  const lyricCount = POOL_LYRIC.list.length + state.customPool.lyric.length;
+  const quoteCount = POOL_QUOTE.list.length + state.customPool.quote.length;
 
-  const songHistory = Object.entries(state.dailySongs || {})
+  const lyricHistory = Object.entries(state.dailyLyric || {})
     .sort((a, b) => b[0].localeCompare(a[0])).slice(0, 30);
-  const pickHistory = Object.entries(state.dailyPicks || {})
+  const quoteHistory = Object.entries(state.dailyQuote || {})
     .sort((a, b) => b[0].localeCompare(a[0])).slice(0, 30);
 
   app.innerHTML = `
@@ -1887,52 +1911,28 @@ function renderDaily(app) {
 
     <div class="daily-card">
       <div class="daily-label">🎵 今日歌曲</div>
-      ${song ? `
-        <div class="daily-song" id="songTitle">${esc(song)}</div>
-        <div class="daily-song-actions">
-          <a class="btn sm primary" href="${neteaseSearchUrl(song)}" target="_blank" rel="noopener">去网易云音乐</a>
-          <button class="btn sm" id="copySongBtn">复制歌名</button>
+      ${lyric ? `
+        <div class="daily-quote">${esc(lyric.text)}</div>
+        <div class="daily-source">—— ${esc(lyric.source)}</div>
+        <div class="daily-actions">
+          <button class="btn sm" id="copyLyricBtn">复制</button>
         </div>
-      ` : `<div class="empty">歌单为空，往下滑添加几首歌</div>`}
+      ` : `<div class="empty">暂无内容</div>`}
     </div>
 
     <div class="daily-card">
       <div class="daily-label">✨ 今日一句</div>
-      ${pick ? `
-        <div class="daily-quote">${esc(pick.text)}</div>
-        <div class="daily-source">—— ${esc(pick.source)}</div>
-        <div class="daily-song-actions" style="margin-top:12px">
+      ${quote ? `
+        <div class="daily-quote">${esc(quote.text)}</div>
+        <div class="daily-source">—— ${esc(quote.source)}</div>
+        <div class="daily-actions">
           <button class="btn sm" id="copyQuoteBtn">复制</button>
         </div>
       ` : `<div class="empty">暂无内容</div>`}
     </div>
 
-    <div class="section-head"><h3>歌单管理</h3><div class="muted">共 ${songCount} 首</div></div>
-    <div class="card" style="margin-bottom:16px">
-      <div class="tip-box" style="margin-bottom:12px">
-        <b>批量粘贴格式</b>：每行一首，用 <code>-</code> 或 <code>|</code> 分隔，例如：<br>
-        牵丝戏 - 银临<br>
-        赤伶 | HITA
-      </div>
-      <textarea id="songInput" placeholder="牵丝戏 - 银临&#10;赤伶 - HITA&#10;倾尽天下 - 河图" style="min-height:120px"></textarea>
-      <div class="row" style="margin-top:10px">
-        <button class="btn primary" id="songImportBtn">批量导入</button>
-        <button class="btn danger" id="songClearBtn">清空歌单</button>
-      </div>
-    </div>
-
-    ${songHistory.length ? `
-      <div class="card" style="margin-bottom:16px">
-        <div class="card-title">歌单历史（最近 30 天）</div>
-        <table>
-          <thead><tr><th style="width:120px">日期</th><th>歌曲</th></tr></thead>
-          <tbody>${songHistory.map(([d, s]) => `<tr><td>${d}</td><td>${esc(s)}</td></tr>`).join('')}</tbody>
-        </table>
-      </div>
-    ` : ''}
-
-    <div class="section-head"><h3>内容池</h3>
-      <div class="muted">诗 ${poemCount} ｜ 歌词 ${lyricCount} ｜ 名言 ${quoteCount}</div>
+    <div class="section-head"><h3>内容池管理</h3>
+      <div class="muted">歌词 ${lyricCount} ｜ 一句 ${quoteCount}</div>
     </div>
     <div class="card" style="margin-bottom:16px">
       <div class="tip-box" style="margin-bottom:12px">
@@ -1941,67 +1941,42 @@ function renderDaily(app) {
         我唯一知道的就是我一无所知|苏格拉底
       </div>
       <div class="row" style="margin-bottom:8px">
-        <select id="poolType" style="min-width:120px">
-          <option value="poem">诗词</option>
-          <option value="lyric">歌词</option>
-          <option value="quote">名言</option>
+        <select id="poolType" style="min-width:140px">
+          <option value="lyric">今日歌曲（歌词）</option>
+          <option value="quote">今日一句（诗+名言）</option>
         </select>
       </div>
       <textarea id="poolInput" placeholder="内容|出处&#10;内容|出处" style="min-height:100px"></textarea>
       <div class="row" style="margin-top:10px">
         <button class="btn primary" id="poolImportBtn">批量添加</button>
       </div>
-      <div class="muted" style="margin-top:8px">自己添加的内容只保存在本地，不同步云端（避免和内置的混在一起）。</div>
+      <div class="muted" style="margin-top:8px">添加的内容只保存在本地，不同步云端。</div>
     </div>
 
-    ${pickHistory.length ? `
-      <div class="card">
-        <div class="card-title">每日一句历史（最近 30 天）</div>
+    ${lyricHistory.length ? `
+      <div class="card" style="margin-bottom:16px">
+        <div class="card-title">今日歌曲历史（最近 30 天）</div>
         <table>
-          <thead><tr><th style="width:120px">日期</th><th>内容</th><th style="width:140px">出处</th></tr></thead>
-          <tbody>
-            ${pickHistory.map(([d, p]) => `<tr><td>${d}</td><td>${esc(p.text)}</td><td>${esc(p.source)}</td></tr>`).join('')}
-          </tbody>
+          <thead><tr><th style="width:120px">日期</th><th>内容</th><th style="width:160px">出处</th></tr></thead>
+          <tbody>${lyricHistory.map(([d, p]) => `<tr><td>${d}</td><td>${esc(p.text)}</td><td>${esc(p.source)}</td></tr>`).join('')}</tbody>
+        </table>
+      </div>
+    ` : ''}
+
+    ${quoteHistory.length ? `
+      <div class="card">
+        <div class="card-title">今日一句历史（最近 30 天）</div>
+        <table>
+          <thead><tr><th style="width:120px">日期</th><th>内容</th><th style="width:160px">出处</th></tr></thead>
+          <tbody>${quoteHistory.map(([d, p]) => `<tr><td>${d}</td><td>${esc(p.text)}</td><td>${esc(p.source)}</td></tr>`).join('')}</tbody>
         </table>
       </div>
     ` : ''}
   `;
 
-  if (song) {
-    $('#copySongBtn').onclick = () => copyText(song);
-  }
-  if (pick) {
-    $('#copyQuoteBtn').onclick = () => copyText(pick.text + ' —— ' + pick.source);
-  }
+  if (lyric) $('#copyLyricBtn').onclick = () => copyText(lyric.text + ' —— ' + lyric.source);
+  if (quote) $('#copyQuoteBtn').onclick = () => copyText(quote.text + ' —— ' + quote.source);
 
-  /* 歌单批量导入 */
-  $('#songImportBtn').onclick = () => {
-    const text = $('#songInput').value;
-    const lines = text.split('\n').map(l => l.trim()).filter(Boolean);
-    if (!lines.length) { toast('请输入歌名'); return; }
-    const newSongs = lines.map(splitSong).filter(Boolean);
-    if (!newSongs.length) { toast('没有有效行'); return; }
-    // 合并去重
-    const existing = new Set(state.songList);
-    let added = 0;
-    newSongs.forEach(s => {
-      if (!existing.has(s)) { state.songList.push(s); existing.add(s); added++; }
-    });
-    save();
-    ensureTodaySongRecorded();
-    toast('添加 ' + added + ' 首');
-    render();
-  };
-
-  $('#songClearBtn').onclick = () => {
-    if (!state.songList.length) { toast('歌单已空'); return; }
-    if (!confirm('确定清空所有歌曲？历史记录会保留。')) return;
-    state.songList = [];
-    save();
-    render();
-  };
-
-  /* 内容池批量导入 */
   $('#poolImportBtn').onclick = () => {
     const type = $('#poolType').value;
     const text = $('#poolInput').value;
@@ -2048,12 +2023,11 @@ function renderReview(app) {
   const dayTotals = days.map(d => state.entries.filter(e => e.date === d).reduce((s, e) => s + e.duration, 0));
   const maxDay = Math.max(...dayTotals, 1);
 
-  // 本周日志 + 每天的歌和诗句
   const weekLogs = days.filter(d => state.logs[d]).map(d => ({
     date: d,
     content: state.logs[d],
-    song: getSongForDate(d),
-    pick: getPickForDate(d)
+    lyric: getLyricForDate(d),
+    quote: getQuoteForDate(d)
   }));
 
   app.innerHTML = `
@@ -2136,8 +2110,8 @@ function renderReview(app) {
             <div class="muted" style="margin-bottom:5px">${l.date}</div>
             <div style="white-space:pre-wrap;line-height:1.6">${esc(l.content)}</div>
             <div class="day-meta">
-              ${l.song ? `<div class="day-meta-item">🎵 <b>${esc(l.song)}</b></div>` : ''}
-              ${l.pick ? `<div class="day-meta-item">📜 ${esc(l.pick.text)} <span style="font-size:12px">—— ${esc(l.pick.source)}</span></div>` : ''}
+              ${l.lyric ? `<div class="day-meta-item">🎵 ${esc(l.lyric.text)} <span style="font-size:12px">—— ${esc(l.lyric.source)}</span></div>` : ''}
+              ${l.quote ? `<div class="day-meta-item">✨ ${esc(l.quote.text)} <span style="font-size:12px">—— ${esc(l.quote.source)}</span></div>` : ''}
             </div>
           </div>
         `).join('')}
@@ -2349,7 +2323,7 @@ function renderSettings(app) {
     <div class="card" style="margin-top:16px">
       <div class="card-title">统计</div>
       <div class="muted">
-        模块数：${state.modules.length} ｜ 记录条数：${state.entries.length} ｜ 日计划数：${Object.keys(state.dayPlans).length} ｜ 日志数：${Object.keys(state.logs).length} ｜ 歌单：${state.songList.length} 首 ｜ 自定义池：诗 ${state.customPool.poem.length} / 歌词 ${state.customPool.lyric.length} / 名言 ${state.customPool.quote.length}
+        模块数：${state.modules.length} ｜ 记录条数：${state.entries.length} ｜ 日计划数：${Object.keys(state.dayPlans).length} ｜ 日志数：${Object.keys(state.logs).length} ｜ 自定义池：歌词 ${state.customPool.lyric.length} / 一句 ${state.customPool.quote.length}
       </div>
     </div>
   `;
@@ -2452,16 +2426,16 @@ function renderSettings(app) {
   $('#exportMd').onclick = () => {
     let md = `# 人生时间仪表盘\n\n导出时间：${new Date().toLocaleString()}\n\n`;
     md += `## 每日日志\n\n`;
-    const allDays = new Set([...Object.keys(state.logs), ...Object.keys(state.dailySongs), ...Object.keys(state.dailyPicks)]);
+    const allDays = new Set([...Object.keys(state.logs), ...Object.keys(state.dailyLyric), ...Object.keys(state.dailyQuote)]);
     const sortedDays = [...allDays].sort();
     sortedDays.forEach(d => {
       const log = state.logs[d];
-      const song = state.dailySongs[d];
-      const pick = state.dailyPicks[d];
-      if (!log && !song && !pick) return;
+      const lyric = state.dailyLyric[d];
+      const quote = state.dailyQuote[d];
+      if (!log && !lyric && !quote) return;
       md += `### ${d}\n\n`;
-      if (song) md += `🎵 ${song}\n\n`;
-      if (pick) md += `📜 ${pick.text} —— ${pick.source}\n\n`;
+      if (lyric) md += `🎵 ${lyric.text} —— ${lyric.source}\n\n`;
+      if (quote) md += `✨ ${quote.text} —— ${quote.source}\n\n`;
       if (log) md += `${log}\n\n`;
     });
     download(`life-dashboard-${todayStr()}.md`, md, 'text/markdown;charset=utf-8');
@@ -2504,10 +2478,9 @@ function renderSettings(app) {
         state.dayPlans = state.dayPlans || {};
         state.daySchedules = state.daySchedules || {};
         state.logs = state.logs || {};
-        state.songList = Array.isArray(state.songList) ? state.songList : [];
-        state.dailySongs = state.dailySongs || {};
-        state.dailyPicks = state.dailyPicks || {};
-        state.customPool = state.customPool || { poem: [], lyric: [], quote: [] };
+        state.dailyLyric = state.dailyLyric || {};
+        state.dailyQuote = state.dailyQuote || {};
+        state.customPool = state.customPool || { lyric: [], quote: [] };
         save();
         applyAppearance();
         reviewWeek = getWeekStart(todayStr());
@@ -2523,6 +2496,7 @@ function renderSettings(app) {
     if (!confirm('再确认一次：真的要清空吗？')) return;
     await clearCloud();
     localStorage.removeItem(STORE_KEY);
+    localStorage.removeItem(POPUP_KEY);
     state = defaultState();
     save();
     applyAppearance();
@@ -2552,9 +2526,9 @@ function init() {
 
   applyAppearance();
 
-  // 每天首次打开，记录今日歌曲和今日一句
-  ensureTodaySongRecorded();
-  ensureTodayPick();
+  // 每日抽取
+  ensureTodayLyric();
+  ensureTodayQuote();
 
   $('#tabs').addEventListener('click', e => {
     const btn = e.target.closest('.tab');
@@ -2593,8 +2567,8 @@ function init() {
         $('#authStatus').textContent = currentUser.email;
         $('#authBtn').textContent = '退出登录';
         syncFromCloud().then(() => {
-          ensureTodaySongRecorded();
-          ensureTodayPick();
+          ensureTodayLyric();
+          ensureTodayQuote();
           render();
         });
       } else {
@@ -2608,6 +2582,9 @@ function init() {
 
   render();
   registerSW();
+
+  // 打开网页时弹窗显示今日内容（每天一次）
+  setTimeout(showDailyPopup, 400);
 }
 
 init();

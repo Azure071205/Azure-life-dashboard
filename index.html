@@ -756,7 +756,7 @@ function defaultState() {
     settings: {
       weekStart: 1, minUnit: 15, theme: 'light',
       bgImage: '', bgOverlay: 0, cardAlpha: 100, bgBlur: 0,
-      accentColor: '', textColor: ''
+      accentColor: '', textColor: '', popupMode: 'once'
     },
     modules: [
       { id: 'm_sleep',   name: '睡眠',      color: '#7c5cff', type: 'fixed',  weekly: 3150, parentId: null, order: 0,  archived: false },
@@ -793,7 +793,7 @@ function loadState() {
       s.settings = Object.assign({
         weekStart: 1, minUnit: 15, theme: 'light',
         bgImage: '', bgOverlay: 0, cardAlpha: 100, bgBlur: 0,
-        accentColor: '', textColor: ''
+        accentColor: '', textColor: '', popupMode: 'once'
       }, s.settings || {});
       s.modules = s.modules || [];
       s.dayPlans = s.dayPlans || {};
@@ -871,7 +871,8 @@ function getQuoteForDate(d) { return state.dailyQuote[d] || null; }
 /* ==================== 每日弹窗 ==================== */
 function showDailyPopup() {
   const today = todayStr();
-  if (localStorage.getItem(POPUP_KEY) === today) return;
+  const mode = state.settings.popupMode || 'once';
+  if (mode === 'once' && localStorage.getItem(POPUP_KEY) === today) return;
   const lyric = getLyricForDate(today);
   const quote = getQuoteForDate(today);
   if (!lyric && !quote) return;
@@ -904,7 +905,7 @@ function showDailyPopup() {
   document.body.appendChild(mask);
 
   const close = () => {
-    localStorage.setItem(POPUP_KEY, today);
+    if (mode === 'once') localStorage.setItem(POPUP_KEY, today);
     mask.style.transition = 'opacity .2s';
     mask.style.opacity = '0';
     setTimeout(() => mask.remove(), 200);
@@ -997,7 +998,7 @@ async function syncToCloud() {
       if (error) console.error('同步日志失败', error);
     }
 
-    // 【新增】同步每日内容（歌词 + 一句）
+    // 同步每日内容（歌词 + 一句）
     const allDates = new Set([
       ...Object.keys(state.dailyLyric || {}),
       ...Object.keys(state.dailyQuote || {})
@@ -1068,7 +1069,7 @@ async function syncFromCloud() {
       cl.forEach(item => { state.logs[item.date] = item.content || ''; });
     }
 
-    // 【新增】拉取每日内容（歌词 + 一句）
+    // 拉取每日内容（歌词 + 一句）
     if (cdc && cdc.length) {
       if (!state.dailyLyric) state.dailyLyric = {};
       if (!state.dailyQuote) state.dailyQuote = {};
@@ -2343,6 +2344,13 @@ function renderSettings(app) {
           <option value="30" ${s.minUnit === 30 ? 'selected' : ''}>30 分钟</option>
         </select>
       </div>
+      <div class="field"><label>每日弹窗</label>
+        <select id="setPopupMode">
+          <option value="once" ${(s.popupMode || 'once') === 'once' ? 'selected' : ''}>每天只弹一次</option>
+          <option value="always" ${s.popupMode === 'always' ? 'selected' : ''}>每次打开都弹</option>
+        </select>
+        <div class="muted">选"每天只弹一次"，当天关掉后当天不再弹；选"每次打开都弹"，刷新或重开都会弹。</div>
+      </div>
     </div>
 
     <div class="card" style="margin-bottom:16px">
@@ -2461,6 +2469,13 @@ function renderSettings(app) {
   };
   $('#setWeekStart').onchange = e => { state.settings.weekStart = Number(e.target.value); save(); toast('已保存'); };
   $('#setUnit').onchange = e => { state.settings.minUnit = Number(e.target.value); save(); toast('已保存'); };
+  $('#setPopupMode').onchange = e => {
+    state.settings.popupMode = e.target.value;
+    save();
+    toast('已保存');
+    // 切到"每次打开都弹"时，清掉今天的标记，让下次打开马上弹
+    if (e.target.value === 'always') localStorage.removeItem(POPUP_KEY);
+  };
 
   $('#exportBtn').onclick = () => {
     download(`life-dashboard-${todayStr()}.json`, JSON.stringify(state, null, 2), 'application/json');
@@ -2517,7 +2532,7 @@ function renderSettings(app) {
         state.settings = Object.assign({
           weekStart: 1, minUnit: 15, theme: 'light',
           bgImage: '', bgOverlay: 0, cardAlpha: 100, bgBlur: 0,
-          accentColor: '', textColor: ''
+          accentColor: '', textColor: '', popupMode: 'once'
         }, state.settings || {});
         state.dayPlans = state.dayPlans || {};
         state.daySchedules = state.daySchedules || {};
@@ -2570,7 +2585,6 @@ function init() {
 
   applyAppearance();
 
-  // 每日抽取（登录状态下会先抽后云同步覆盖）
   ensureTodayLyric();
   ensureTodayQuote();
 
@@ -2627,7 +2641,6 @@ function init() {
   render();
   registerSW();
 
-  // 打开网页时弹窗显示今日内容（每天一次）
   setTimeout(showDailyPopup, 400);
 }
 

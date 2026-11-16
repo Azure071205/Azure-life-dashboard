@@ -49,6 +49,7 @@ th{color:var(--dim);font-weight:500;font-size:12px}tr:last-child td{border-botto
 input,select,textarea{font-family:inherit;font-size:14px;padding:8px 11px;border-radius:9px;border:1px solid var(--border);background:rgb(var(--card-rgb) / var(--card-alpha));color:var(--text);outline:none;transition:.15s;}
 input:focus,select:focus,textarea:focus{border-color:var(--accent)}
 input[type=color]{padding:2px;height:36px;width:46px;cursor:pointer}
+input[type=range]{padding:0;height:28px;accent-color:var(--accent)}
 textarea{width:100%;resize:vertical;min-height:90px;line-height:1.6}
 .btn{font-family:inherit;font-size:13px;padding:8px 15px;border-radius:9px;border:1px solid var(--border);background:rgb(var(--card-rgb) / var(--card-alpha));color:var(--text);cursor:pointer;transition:.15s;text-decoration:none;display:inline-flex;align-items:center;gap:4px;}
 .btn:hover{border-color:var(--accent);color:var(--accent)}
@@ -67,6 +68,7 @@ textarea{width:100%;resize:vertical;min-height:90px;line-height:1.6}
 .field{margin-bottom:13px}.field label{display:block;font-size:12px;color:var(--dim);margin-bottom:5px}
 .field input,.field select{width:100%}
 .modal-actions{display:flex;justify-content:flex-end;gap:9px;margin-top:18px}
+.tag{font-size:11px;padding:2px 8px;border-radius:99px;background:var(--accent-soft);color:var(--dim)}
 .toast{position:fixed;bottom:26px;left:50%;transform:translateX(-50%);background:var(--text);color:var(--bg);padding:10px 20px;border-radius:99px;font-size:13px;z-index:200;opacity:0;transition:.3s;pointer-events:none;}
 .toast.show{opacity:1}
 .entry{display:flex;align-items:center;gap:12px;background:rgb(var(--card-rgb) / var(--card-alpha));border:1px solid var(--border);border-radius:11px;padding:11px 14px;margin-bottom:8px;}
@@ -95,6 +97,8 @@ textarea{width:100%;resize:vertical;min-height:90px;line-height:1.6}
 .daily-popup-close:hover{opacity:.88}
 @keyframes fadeIn{from{opacity:0}to{opacity:1}}
 @keyframes popIn{from{opacity:0;transform:scale(.9) translateY(20px)}to{opacity:1;transform:scale(1) translateY(0)}}
+
+/* ======== 打卡样式 ======== */
 .week-date-bar { display: flex; justify-content: space-between; gap: 8px; margin-bottom: 20px; background: rgb(var(--card-rgb) / var(--card-alpha)); padding: 12px; border-radius: var(--radius); border: 1px solid var(--border); }
 .date-item { flex: 1; text-align: center; padding: 8px 0; border-radius: 8px; font-size: 13px; color: var(--dim); transition: .2s; }
 .date-item.today { background: #fef3c7; color: #92400e; font-weight: 700; box-shadow: 0 2px 8px rgba(245, 158, 11, 0.2); }
@@ -115,6 +119,7 @@ html[data-theme="dark"] .date-item.today { background: #78350f; color: #fcd34d; 
 .achieve-title { font-size: 18px; font-weight: 700; color: var(--accent); margin-bottom: 16px; }
 .achieve-quote { font-size: 15px; line-height: 1.8; color: var(--text); margin-bottom: 8px; }
 .achieve-source { font-size: 12px; color: var(--dim); text-align: right; margin-bottom: 20px; }
+.bg-preview{width:100%;height:140px;border-radius:10px;border:1px dashed var(--border);background-size:cover;background-position:center;display:flex;align-items:center;justify-content:center;color:var(--dim);font-size:13px;margin-bottom:10px;}
 </style>
 </head>
 <body>
@@ -131,6 +136,7 @@ html[data-theme="dark"] .date-item.today { background: #78350f; color: #fcd34d; 
     <button class="tab" data-view="log">记录</button>
     <button class="tab" data-view="plan">计划</button>
     <button class="tab" data-view="modules">模块</button>
+    <button class="tab" data-view="daily">每日</button>
     <button class="tab" data-view="settings">设置</button>
     <div class="menu-divider"></div>
     <div class="menu-auth">
@@ -194,6 +200,26 @@ function fmtDuration(min) { if (min == null) return '—'; const h = Math.floor(
 function calcDuration(start, end) { if (!start || !end) return 0; const [sh, sm] = start.split(':').map(Number); const [eh, em] = end.split(':').map(Number); const diff = (eh * 60 + em) - (sh * 60 + sm); return diff > 0 ? diff : 0; }
 function toast(msg) { const t = $('#toast'); t.textContent = msg; t.classList.add('show'); clearTimeout(t._tid); t._tid = setTimeout(() => t.classList.remove('show'), 2400); }
 function copyText(text) { if (navigator.clipboard && navigator.clipboard.writeText) return navigator.clipboard.writeText(text).then(() => toast('已复制')).catch(() => {}); }
+
+function compressImage(file, maxWidth = 1920, quality = 0.82) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = e => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        let w = img.width, h = img.height;
+        if (w > maxWidth) { h = Math.round(h * maxWidth / w); w = maxWidth; }
+        canvas.width = w; canvas.height = h;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, w, h);
+        resolve(canvas.toDataURL('image/jpeg', quality));
+      };
+      img.onerror = reject; img.src = e.target.result;
+    };
+    reader.onerror = reject; reader.readAsDataURL(file);
+  });
+}
 
 /* ==================== 状态与持久化 ==================== */
 const STORE_KEY = 'life_dashboard_v1';
@@ -328,6 +354,7 @@ function render() {
   else if (currentView === 'log') renderLog(app);
   else if (currentView === 'plan') renderPlan(app);
   else if (currentView === 'modules') renderModules(app);
+  else if (currentView === 'daily') renderDaily(app);
   else if (currentView === 'settings') renderSettings(app);
 }
 
@@ -605,18 +632,114 @@ function renderPlan(app) {
   };
 }
 
-/* ==================== 设置页 ==================== */
+/* ==================== 每日页 ==================== */
+function renderDaily(app) {
+  const today = todayStr();
+  ensureTodayContent();
+  const lyric = state.dailyLyric[today];
+  const quote = state.dailyQuote[today];
+  const dObj = parseDate(today);
+  
+  app.innerHTML = `<div class="section-head"><h2>每日拾贝</h2><div class="muted">${today} ${WEEK_NAMES[dObj.getDay()]}</div></div>
+    <div class="card" style="margin-bottom:16px;border-top:3px solid var(--accent);border-radius:var(--radius);padding:24px;">
+      <div class="muted" style="margin-bottom:12px;font-weight:600;">🎵 今日歌曲</div>
+      <div style="font-size:18px;line-height:1.9;white-space:pre-wrap;margin-bottom:14px;">${lyric ? esc(lyric.text) : '暂无'}</div>
+      <div class="muted" style="text-align:right;">—— ${lyric ? esc(lyric.source) : ''}</div>
+    </div>
+    <div class="card" style="border-top:3px solid #ec4899;border-radius:var(--radius);padding:24px;">
+      <div class="muted" style="margin-bottom:12px;font-weight:600;">✨ 今日一句</div>
+      <div style="font-size:18px;line-height:1.9;white-space:pre-wrap;margin-bottom:14px;">${quote ? esc(quote.text) : '暂无'}</div>
+      <div class="muted" style="text-align:right;">—— ${quote ? esc(quote.source) : ''}</div>
+    </div>`;
+}
+
+/* ==================== 设置页 (全功能恢复) ==================== */
 function renderSettings(app) {
   const s = state.settings;
   app.innerHTML = `<div class="section-head"><h2>设置</h2></div>
     <div class="form-card">
-      <div class="field"><label>主题</label><select id="setTheme"><option value="light" ${s.theme === 'light' ? 'selected' : ''}>浅色</option><option value="dark" ${s.theme === 'dark' ? 'selected' : ''}>深色</option></select></div>
-      <div class="field"><label>周起始日</label><select id="setWeekStart"><option value="0" ${s.weekStart === 0 ? 'selected' : ''}>周日</option><option value="1" ${s.weekStart === 1 ? 'selected' : ''}>周一</option></select></div>
-      <div class="field"><label>每日弹窗模式</label><select id="setPopup"><option value="once" ${s.popupMode === 'once' ? 'selected' : ''}>每天弹一次</option><option value="always" ${s.popupMode === 'always' ? 'selected' : ''}>每次刷新都弹</option></select></div>
-    </div>`;
+      <div class="field">
+        <label>主题</label>
+        <select id="setTheme">
+          <option value="light" ${s.theme === 'light' ? 'selected' : ''}>浅色</option>
+          <option value="dark" ${s.theme === 'dark' ? 'selected' : ''}>深色</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>周起始日</label>
+        <select id="setWeekStart">
+          <option value="0" ${s.weekStart === 0 ? 'selected' : ''}>周日</option>
+          <option value="1" ${s.weekStart === 1 ? 'selected' : ''}>周一</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>每日弹窗模式</label>
+        <select id="setPopup">
+          <option value="once" ${s.popupMode === 'once' ? 'selected' : ''}>每天弹一次</option>
+          <option value="always" ${s.popupMode === 'always' ? 'selected' : ''}>每次刷新都弹</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>强调色 (默认 #5b5bd6)</label>
+        <input type="color" id="setAccent" value="${s.accentColor || '#5b5bd6'}">
+        <button class="btn sm" id="resetAccent" style="margin-left:10px;">恢复默认</button>
+      </div>
+      <div class="field">
+        <label>文字颜色 (默认 #16181f)</label>
+        <input type="color" id="setText" value="${s.textColor || '#16181f'}">
+        <button class="btn sm" id="resetText" style="margin-left:10px;">恢复默认</button>
+      </div>
+    </div>
+    
+    <div class="form-card">
+      <div class="card-title">背景与透明度</div>
+      <div class="field">
+        <label>背景图 URL (填入图片链接)</label>
+        <input type="text" id="setBgUrl" value="${esc(s.bgImage || '')}" placeholder="https://...">
+      </div>
+      <div class="field">
+        <label>或上传本地图片</label>
+        <input type="file" id="setBgFile" accept="image/*" style="border:none;padding:0;">
+      </div>
+      <div class="bg-preview" id="bgPreview" style="background-image:url(${s.bgImage || ''})">${s.bgImage ? '' : '暂无背景图'}</div>
+      <div class="field">
+        <label>背景遮罩透明度 (0-100)</label>
+        <input type="range" id="setOverlay" min="0" max="100" value="${s.bgOverlay || 0}">
+      </div>
+      <div class="field">
+        <label>卡片透明度 (0-100)</label>
+        <input type="range" id="setCardAlpha" min="0" max="100" value="${s.cardAlpha || 100}">
+      </div>
+    </div>
+  `;
+
   $('#setTheme').onchange = e => { state.settings.theme = e.target.value; applyAppearance(); save(); };
   $('#setWeekStart').onchange = e => { state.settings.weekStart = parseInt(e.target.value); save(); render(); };
   $('#setPopup').onchange = e => { state.settings.popupMode = e.target.value; save(); };
+  
+  $('#setAccent').oninput = e => { state.settings.accentColor = e.target.value; applyAppearance(); save(); };
+  $('#resetAccent').onclick = () => { state.settings.accentColor = ''; applyAppearance(); save(); render(); };
+  
+  $('#setText').oninput = e => { state.settings.textColor = e.target.value; applyAppearance(); save(); };
+  $('#resetText').onclick = () => { state.settings.textColor = ''; applyAppearance(); save(); render(); };
+
+  const updateBg = (url) => {
+    state.settings.bgImage = url; applyAppearance(); save();
+    $('#bgPreview').style.backgroundImage = url ? `url(${url})` : '';
+    $('#bgPreview').textContent = url ? '' : '暂无背景图';
+  };
+  $('#setBgUrl').onchange = e => updateBg(e.target.value.trim());
+  $('#setBgFile').onchange = async e => {
+    const file = e.target.files[0]; if (!file) return;
+    try {
+      toast('正在处理图片...');
+      const base64 = await compressImage(file);
+      updateBg(base64);
+      toast('背景已更新');
+    } catch (err) { toast('图片处理失败'); }
+  };
+  $('#setOverlay').oninput = e => { state.settings.bgOverlay = parseInt(e.target.value); applyAppearance(); save(); };
+  $('#setCardAlpha').oninput = e => { state.settings.cardAlpha = parseInt(e.target.value); applyAppearance(); save(); };
 }
 
 /* ==================== 登录与初始化 ==================== */
